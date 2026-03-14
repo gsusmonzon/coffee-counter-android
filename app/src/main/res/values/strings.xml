@@ -6,8 +6,12 @@
     <string name="settings_label">Settings</string>
     <string name="today_title">Today</string>
     <string name="todays_coffee_label">Today\'s coffee</string>
+    <string name="today_supporting_text">One tap logs one coffee.</string>
     <string name="add_coffee_label">Add coffee</string>
     <string name="history_title">History</string>
+    <string name="history_last_7_days_title">Last 7 days</string>
+    <string name="history_last_30_days_title">Last 30 days</string>
+    <string name="history_average_per_active_day_label">%1$s/day on coffee days</string>
     <string name="settings_about_title">About</string>
     <string name="app_version_label">App version</string>
     <string name="reset_all_label">Reset all</string>

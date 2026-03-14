@@ -103,7 +103,7 @@ Status values for implementation:
 | 4 | History with 7-day and 30-day zero-filled stats | Accepted | 2026-03-14 |
 | 5 | Widget add/undo flow with refresh and vibration | Accepted | 2026-03-14 |
 | 6 | Settings screen with app version and reset-all | Accepted | 2026-03-14 |
-| 7 | Final regression coverage and device validation | Pending | - |
+| 7 | Final regression coverage and device validation | In progress | - |
 | 8 | Widget setup refinement with in-app add-widget flow | Pending | - |
 
 ## Skill Recommendation

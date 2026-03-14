@@ -1,6 +1,7 @@
 package com.gsusmonzon.coffeecounter.ui.home
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,9 +33,9 @@ import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
-import com.gsusmonzon.coffeecounter.domain.HistoryTimelineEntry
 import com.gsusmonzon.coffeecounter.domain.buildHistorySummary
 import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
+import com.gsusmonzon.coffeecounter.ui.UiTestTags
 import java.text.DecimalFormat
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,24 +44,26 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class HistorySectionUiState(
-    val title: String,
+    @param:StringRes val titleRes: Int,
     val totalCount: Int,
     val averagePerDay: Double,
+    val totalCountTag: String,
 )
 
 data class HomeUiState(
     val todayCount: Int = 0,
-    val todaySupportingText: String = "One tap logs one coffee.",
     val historySections: List<HistorySectionUiState> = listOf(
         HistorySectionUiState(
-            title = "Last 7 days",
+            titleRes = R.string.history_last_7_days_title,
             totalCount = 0,
             averagePerDay = 0.0,
+            totalCountTag = UiTestTags.HOME_7_DAY_TOTAL,
         ),
         HistorySectionUiState(
-            title = "Last 30 days",
+            titleRes = R.string.history_last_30_days_title,
             totalCount = 0,
             averagePerDay = 0.0,
+            totalCountTag = UiTestTags.HOME_30_DAY_TOTAL,
         ),
     ),
 )
@@ -85,18 +89,21 @@ class HomeViewModel(
         val last7DaySummary = buildHistorySummary(last7Days)
         val last30DaySummary = buildHistorySummary(last30Days)
 
+        // Product decision: averages stay based on active coffee days, not full calendar windows.
         HomeUiState(
             todayCount = todayCount,
             historySections = listOf(
                 HistorySectionUiState(
-                    title = "Last 7 days",
+                    titleRes = R.string.history_last_7_days_title,
                     totalCount = last7DaySummary.totalCount,
                     averagePerDay = last7DaySummary.averagePerActiveDay,
+                    totalCountTag = UiTestTags.HOME_7_DAY_TOTAL,
                 ),
                 HistorySectionUiState(
-                    title = "Last 30 days",
+                    titleRes = R.string.history_last_30_days_title,
                     totalCount = last30DaySummary.totalCount,
                     averagePerDay = last30DaySummary.averagePerActiveDay,
+                    totalCountTag = UiTestTags.HOME_30_DAY_TOTAL,
                 ),
             ),
         )
@@ -178,12 +185,13 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = uiState.todaySupportingText,
+                            text = stringResource(R.string.today_supporting_text),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     Text(
                         text = uiState.todayCount.toString(),
+                        modifier = Modifier.testTag(UiTestTags.HOME_TODAY_COUNT),
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -214,16 +222,20 @@ fun HomeScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = section.title,
+                            text = stringResource(section.titleRes),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = section.averagePerDay.toPerDayLabel(),
+                            text = stringResource(
+                                R.string.history_average_per_active_day_label,
+                                section.averagePerDay.toDisplayLabel(),
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     Text(
                         text = section.totalCount.toString(),
+                        modifier = Modifier.testTag(section.totalCountTag),
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -244,9 +256,7 @@ private fun SectionTitle(title: String) {
 
 private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
 
-private fun Double.toPerDayLabel(): String {
-    if (this == 0.0) return "0/day"
-
+private fun Double.toDisplayLabel(): String {
     val formatter = DecimalFormat("0.#")
-    return "${formatter.format(this)}/day"
+    return formatter.format(this)
 }

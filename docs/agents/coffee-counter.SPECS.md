@@ -298,7 +298,10 @@ The counts remain unchanged.
 ## V2
 
 - Edit past days
-- Export data (CSV)
+- Export data (text, json or csv)
+- Alarm for late log: we are building an habit of log coffees. Set a daily alarm at 10AM(?) if th euser has logged nothing yet. Not time sensitive
+- i18: localize in TOP 5 languages first. At least EN, ES
+- Review best practices
 
 Possible later improvements:
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,14 +28,17 @@ import com.gsusmonzon.coffeecounter.ui.theme.CoffeeCounterTheme
 enum class TopLevelDestination(
     @param:StringRes val labelRes: Int,
     @param:DrawableRes val iconRes: Int,
+    val testTag: String,
 ) {
     HOME(
         labelRes = R.string.home_label,
         iconRes = R.drawable.ic_home,
+        testTag = UiTestTags.NAV_HOME,
     ),
     SETTINGS(
         labelRes = R.string.settings_label,
         iconRes = R.drawable.ic_account_box,
+        testTag = UiTestTags.NAV_SETTINGS,
     ),
 }
 
@@ -54,6 +58,7 @@ fun CoffeeCounterApp() {
             NavigationBar {
                 TopLevelDestination.entries.forEach { destination ->
                     NavigationBarItem(
+                        modifier = Modifier.testTag(destination.testTag),
                         selected = destination == currentDestination,
                         onClick = { currentDestination = destination },
                         icon = {

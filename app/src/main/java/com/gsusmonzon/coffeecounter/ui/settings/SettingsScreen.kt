@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.BuildConfig
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.ui.UiTestTags
 import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import com.gsusmonzon.coffeecounter.widget.GlanceCoffeeWidgetUpdater
 import kotlinx.coroutines.launch
@@ -171,7 +173,9 @@ fun SettingsScreen(
                     )
                     Button(
                         onClick = onResetAllClick,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .testTag(UiTestTags.SETTINGS_RESET_BUTTON),
                     ) {
                         Text(text = stringResource(R.string.reset_all_button_label))
                     }
