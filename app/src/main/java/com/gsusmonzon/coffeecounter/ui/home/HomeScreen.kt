@@ -29,37 +29,77 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
+import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
+import com.gsusmonzon.coffeecounter.domain.HistoryTimelineEntry
+import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class HistorySummaryUiState(
+data class HistoryDayUiState(
+    val date: java.time.LocalDate,
+    val count: Int,
+)
+
+data class HistorySectionUiState(
     val title: String,
-    val supportingText: String,
+    val entries: List<HistoryDayUiState>,
 )
 
 data class HomeUiState(
     val todayCount: Int = 0,
     val todaySupportingText: String = "One tap logs one coffee.",
-    val historySummaries: List<HistorySummaryUiState> = listOf(
-        HistorySummaryUiState(
+    val historySections: List<HistorySectionUiState> = listOf(
+        HistorySectionUiState(
             title = "Last 7 days",
-            supportingText = "History rendering arrives in Phase 4.",
+            entries = emptyList(),
         ),
-        HistorySummaryUiState(
+        HistorySectionUiState(
             title = "Last 30 days",
-            supportingText = "History rendering arrives in Phase 4.",
+            entries = emptyList(),
         ),
     ),
 )
 
 class HomeViewModel(
     private val coffeeRepository: CoffeeRepository,
+    private val localDateProvider: LocalDateProvider = SystemLocalDateProvider,
 ) : ViewModel() {
-    val uiState: StateFlow<HomeUiState> = coffeeRepository.observeTodayCount()
-        .map { todayCount -> HomeUiState(todayCount = todayCount) }
+    val uiState: StateFlow<HomeUiState> = combine(
+        coffeeRepository.observeTodayCount(),
+        coffeeRepository.observeDailyCounts(
+            startDate = localDateProvider.today().minusDays(HISTORY_DAYS_30.toLong() - 1),
+            endDate = localDateProvider.today(),
+        ),
+    ) { todayCount, storedCounts ->
+        val today = localDateProvider.today()
+        val last30Days = buildHistoryTimeline(
+            endDate = today,
+            days = HISTORY_DAYS_30,
+            storedCounts = storedCounts,
+        )
+
+        HomeUiState(
+            todayCount = todayCount,
+            historySections = listOf(
+                HistorySectionUiState(
+                    title = "Last 7 days",
+                    entries = last30Days.take(HISTORY_DAYS_7).toHistoryEntries(),
+                ),
+                HistorySectionUiState(
+                    title = "Last 30 days",
+                    entries = last30Days.toHistoryEntries(),
+                ),
+            ),
+        )
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -73,12 +113,19 @@ class HomeViewModel(
     }
 
     companion object {
+        private const val HISTORY_DAYS_7 = 7
+        private const val HISTORY_DAYS_30 = 30
+
         fun factory(
             coffeeRepository: CoffeeRepository,
+            localDateProvider: LocalDateProvider = SystemLocalDateProvider,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HomeViewModel(coffeeRepository) as T
+                return HomeViewModel(
+                    coffeeRepository = coffeeRepository,
+                    localDateProvider = localDateProvider,
+                ) as T
             }
         }
     }
@@ -156,7 +203,7 @@ fun HomeScreen(
             SectionTitle(title = stringResource(R.string.history_title))
         }
 
-        items(uiState.historySummaries) { summary ->
+        items(uiState.historySections) { section ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier
@@ -165,13 +212,19 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = summary.title,
+                        text = section.title,
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    Text(
-                        text = summary.supportingText,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    if (section.entries.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.history_empty_label),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        section.entries.forEach { entry ->
+                            HistoryRow(entry = entry)
+                        }
+                    }
                 }
             }
         }
@@ -187,4 +240,35 @@ private fun SectionTitle(title: String) {
     )
 }
 
+@Composable
+private fun HistoryRow(entry: HistoryDayUiState) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = entry.date.toDisplayLabel(),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = entry.count.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
 private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
+
+private fun List<HistoryTimelineEntry>.toHistoryEntries(): List<HistoryDayUiState> {
+    return map { entry ->
+        HistoryDayUiState(
+            date = entry.date,
+            count = entry.count,
+        )
+    }
+}
+
+private fun java.time.LocalDate.toDisplayLabel(): String {
+    return format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+}

@@ -2,6 +2,7 @@ package com.gsusmonzon.coffeecounter.ui.home
 
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +39,10 @@ class HomeViewModelTest {
     fun uiState_reflectsRepositoryTodayCount() = runTest(dispatcher) {
         repository.seedTodayCount(3)
 
-        val viewModel = HomeViewModel(repository)
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = FixedLocalDateProvider(LocalDate.of(2026, 3, 14)),
+        )
         advanceUntilIdle()
 
         assertEquals(3, viewModel.uiState.value.todayCount)
@@ -46,7 +50,10 @@ class HomeViewModelTest {
 
     @Test
     fun onAddCoffeeClick_incrementsTodayCount() = runTest(dispatcher) {
-        val viewModel = HomeViewModel(repository)
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = FixedLocalDateProvider(LocalDate.of(2026, 3, 14)),
+        )
 
         viewModel.onAddCoffeeClick()
         advanceUntilIdle()
@@ -54,17 +61,49 @@ class HomeViewModelTest {
         assertEquals(1, repository.todayCount.value)
         assertEquals(1, viewModel.uiState.value.todayCount)
     }
+
+    @Test
+    fun uiState_buildsZeroFilledHistorySections() = runTest(dispatcher) {
+        repository.seedTodayCount(3)
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 14), count = 3),
+                DailyCount(date = LocalDate.of(2026, 3, 12), count = 1),
+            )
+        )
+
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = FixedLocalDateProvider(LocalDate.of(2026, 3, 14)),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(3, 0, 1, 0, 0, 0, 0),
+            viewModel.uiState.value.historySections.first().entries.map { it.count },
+        )
+        assertEquals(
+            LocalDate.of(2026, 3, 14),
+            viewModel.uiState.value.historySections.first().entries.first().date,
+        )
+        assertEquals(30, viewModel.uiState.value.historySections.last().entries.size)
+    }
 }
 
 private class FakeCoffeeRepository : CoffeeRepository {
     val todayCount = MutableStateFlow(0)
+    private val dailyCounts = MutableStateFlow<List<DailyCount>>(emptyList())
 
     override fun observeTodayCount(): Flow<Int> = todayCount
 
     override fun observeDailyCounts(
         startDate: LocalDate,
         endDate: LocalDate,
-    ): Flow<List<DailyCount>> = todayCount.map { emptyList() }
+    ): Flow<List<DailyCount>> = dailyCounts.map { counts ->
+        counts.filter { dailyCount ->
+            dailyCount.date >= startDate && dailyCount.date <= endDate
+        }
+    }
 
     override suspend fun incrementToday() {
         todayCount.value += 1
@@ -81,4 +120,14 @@ private class FakeCoffeeRepository : CoffeeRepository {
     fun seedTodayCount(count: Int) {
         todayCount.value = count
     }
+
+    fun seedHistory(counts: List<DailyCount>) {
+        dailyCounts.value = counts
+    }
+}
+
+private class FixedLocalDateProvider(
+    private val date: LocalDate,
+) : LocalDateProvider {
+    override fun today(): LocalDate = date
 }
