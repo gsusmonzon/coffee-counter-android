@@ -275,7 +275,17 @@ internal class VibrationWidgetFeedbackPerformer(
     private val vibrator = context.getSystemService(VibratorManager::class.java).defaultVibrator
 
     override fun performActionFeedback() {
-        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+        if (!vibrator.hasVibrator()) {
+            return
+        }
+
+        try {
+            // Best effort only: widget actions run outside the app's foreground UI, so some
+            // devices or launchers may suppress haptics even when vibration is available.
+            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+        } catch (exception: RuntimeException) {
+            // Ignore runtime failures and keep widget actions functional.
+        }
     }
 }
 

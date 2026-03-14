@@ -102,7 +102,7 @@ Status values for implementation:
 | 2 | Room-backed coffee logging and repository tests | Accepted | 2026-03-14 |
 | 3 | Home screen with today counter and manual add | Accepted | 2026-03-14 |
 | 4 | History with 7-day and 30-day zero-filled stats | Accepted | 2026-03-14 |
-| 5 | Widget add/undo flow with refresh and vibration | Accepted | 2026-03-14 |
+| 5 | Widget add/undo flow with refresh and best-effort haptics | Accepted | 2026-03-14 |
 | 6 | Settings screen with app version and delete-all-history | Accepted | 2026-03-14 |
 | 7 | Final regression coverage and device validation | Accepted | 2026-03-14 |
 | 8 | Widget setup refinement with in-app add-widget flow | Accepted | 2026-03-14 |
@@ -269,12 +269,13 @@ Scope:
 - tap main area to add `+1`
 - tap small undo area to subtract `-1`
 - refresh widget immediately after action
-- add vibration feedback on add and undo
+- attempt best-effort haptic feedback on add and undo
 
 Implementation notes:
 - keep widget layout optimized for speed and readability
 - share repository logic with the app to avoid duplicated rules
 - if Glance creates avoidable friction for the MVP, reassess early before the implementation spreads
+- treat widget haptics as best-effort only; launcher and background execution may suppress them
 
 Verification:
 - widget can be added to the home screen

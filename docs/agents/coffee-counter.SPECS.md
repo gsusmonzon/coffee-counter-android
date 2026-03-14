@@ -27,7 +27,7 @@ Included:
 - 2x1 home screen widget
 - Tap main area to add one coffee
 - Small undo area to subtract one coffee
-- Vibration feedback on add and undo
+- Best-effort haptic feedback on add and undo when supported by the platform/launcher
 - Today’s count visible in widget
 - Automatic day rollover
 - Local data persistence
@@ -95,7 +95,7 @@ The widget shall display:
 
 The widget shall refresh immediately after each action.
 
-The widget shall provide **vibration feedback** after each add or undo action.
+The widget shall attempt **best-effort haptic feedback** after each add or undo action when platform and launcher behavior allow it.
 
 The widget shall remain usable without opening the app.
 
@@ -176,7 +176,7 @@ Behavior:
 
 - Tap main area → `+1`
 - Tap undo area → `-1`
-- Vibration triggered on action
+- Best-effort haptics attempted on action
 - Widget refreshes immediately
 
 Undo rules:
@@ -208,7 +208,7 @@ The widget refreshes immediately.
 
 **And**
 
-A vibration feedback occurs.
+Best-effort haptic feedback is attempted.
 
 ---
 
@@ -232,7 +232,7 @@ The widget refreshes immediately.
 
 **And**
 
-A vibration feedback occurs.
+Best-effort haptic feedback is attempted.
 
 ---
 

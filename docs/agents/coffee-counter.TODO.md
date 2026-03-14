@@ -4,7 +4,7 @@
 - [x] Define product goal
 - [x] Define V1 scope
 - [x] Decide widget interaction model
-- [x] Decide feedback for V1: vibration only
+- [x] Decide feedback for V1: widget haptics are best-effort only
 - [x] Decide empty days in stats: synthetic 0
 - [x] Decide export: V2
 - [x] Decide edit past days: not V1
@@ -21,7 +21,7 @@
 - [x] Sketch 2x1 widget layout
 - [x] Define tap zones: main add area, small undo area, optional open app area
 - [ ] Define visual states for widget
-- [x] Define vibration behavior
+- [x] Define widget haptics behavior
 - [x] Define history screen layout
 - [x] Define 7-day and 30-day stats views
 - [ ] Define empty state for first use
@@ -34,7 +34,7 @@
 - [x] Define local date handling
 - [x] Define synthetic zero generation for stats UI
 - [x] Define app navigation
-- [x] Define vibration integration
+- [x] Define widget haptics integration
 
 ## Android project setup
 - [x] Create Android project
@@ -72,8 +72,8 @@
 - [x] Add simple app icon and label
 
 ## Feedback
-- [x] Trigger vibration on add
-- [x] Trigger vibration on undo
+- [x] Attempt widget haptics on add
+- [x] Attempt widget haptics on undo
 - [x] Ensure feedback is fast and not excessive
 
 ## Testing
