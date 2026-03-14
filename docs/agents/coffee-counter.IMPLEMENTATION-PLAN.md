@@ -98,7 +98,7 @@ Status values for implementation:
 | Phase | Goal | Status | Completed on |
 |---|---|---|---|
 | 1 | Project foundation and architecture skeleton | Accepted | 2026-03-14 |
-| 2 | Room-backed coffee logging and repository tests | Pending | - |
+| 2 | Room-backed coffee logging and repository tests | Accepted | 2026-03-14 |
 | 3 | Home screen with today counter and manual add | Pending | - |
 | 4 | History with 7-day and 30-day zero-filled stats | Pending | - |
 | 5 | Widget add/undo flow with refresh and vibration | Pending | - |

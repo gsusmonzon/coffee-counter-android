@@ -25,8 +25,8 @@ import com.gsusmonzon.coffeecounter.ui.settings.SettingsRoute
 import com.gsusmonzon.coffeecounter.ui.theme.CoffeeCounterTheme
 
 enum class TopLevelDestination(
-    @StringRes val labelRes: Int,
-    @DrawableRes val iconRes: Int,
+    @param:StringRes val labelRes: Int,
+    @param:DrawableRes val iconRes: Int,
 ) {
     HOME(
         labelRes = R.string.home_label,
