@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -109,6 +110,12 @@ class HomeViewModel(
         }
     }
 
+    fun onRemoveCoffeeClick() {
+        viewModelScope.launch {
+            coffeeRepository.decrementToday()
+        }
+    }
+
     companion object {
         fun factory(
             coffeeRepository: CoffeeRepository,
@@ -141,6 +148,7 @@ fun HomeRoute(
     HomeScreen(
         uiState = uiState,
         onAddCoffeeClick = viewModel::onAddCoffeeClick,
+        onRemoveCoffeeClick = viewModel::onRemoveCoffeeClick,
         modifier = modifier,
     )
 }
@@ -149,85 +157,72 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     onAddCoffeeClick: () -> Unit,
+    onRemoveCoffeeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item {
-            SectionTitle(title = stringResource(R.string.today_title))
+            TodayCard(
+                todayCount = uiState.todayCount,
+                onAddCoffeeClick = onAddCoffeeClick,
+                onRemoveCoffeeClick = onRemoveCoffeeClick,
+            )
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = stringResource(R.string.todays_coffee_label),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.today_supporting_text),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    Text(
-                        text = uiState.todayCount.toString(),
-                        modifier = Modifier.testTag(UiTestTags.HOME_TODAY_COUNT),
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+            SectionTitle(
+                title = stringResource(R.string.history_title),
+            )
+        }
+
+        if (uiState.historySections.all { it.totalCount == 0 }) {
+            item {
+                EmptyHistoryCard()
             }
-        }
-
-        item {
-            Button(
-                onClick = onAddCoffeeClick,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(R.string.add_coffee_label))
-            }
-        }
-
-        item {
-            SectionTitle(title = stringResource(R.string.history_title))
         }
 
         items(uiState.historySections) { section ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = stringResource(section.titleRes),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.history_average_per_active_day_label,
+                                    section.averagePerDay.toDisplayLabel(),
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
-                            text = stringResource(section.titleRes),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.history_average_per_active_day_label,
-                                section.averagePerDay.toDisplayLabel(),
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = section.totalCount.toString(),
+                            modifier = Modifier.testTag(section.totalCountTag),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
-                    Text(
-                        text = section.totalCount.toString(),
-                        modifier = Modifier.testTag(section.totalCountTag),
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                    )
                 }
             }
         }
@@ -235,7 +230,100 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+private fun TodayCard(
+    todayCount: Int,
+    onAddCoffeeClick: () -> Unit,
+    onRemoveCoffeeClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.today_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = stringResource(R.string.today_supporting_text),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.todays_coffee_label),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = todayCount.toString(),
+                    modifier = Modifier.testTag(UiTestTags.HOME_TODAY_COUNT),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = onRemoveCoffeeClick) {
+                        Text(text = stringResource(R.string.remove_coffee_label))
+                    }
+                    Button(onClick = onAddCoffeeClick) {
+                        Text(text = stringResource(R.string.add_coffee_label))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyHistoryCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.history_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.history_empty_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(
+    title: String,
+) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,

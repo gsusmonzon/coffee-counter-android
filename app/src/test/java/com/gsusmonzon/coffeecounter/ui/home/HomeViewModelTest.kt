@@ -66,6 +66,29 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun onRemoveCoffeeClick_decrementsTodayCountWithoutGoingNegative() = runTest(dispatcher) {
+        repository.seedTodayCount(2)
+
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = localDateProvider,
+        )
+
+        viewModel.onRemoveCoffeeClick()
+        advanceUntilIdle()
+
+        assertEquals(1, repository.todayCount())
+        assertEquals(1, viewModel.uiState.value.todayCount)
+
+        viewModel.onRemoveCoffeeClick()
+        viewModel.onRemoveCoffeeClick()
+        advanceUntilIdle()
+
+        assertEquals(0, repository.todayCount())
+        assertEquals(0, viewModel.uiState.value.todayCount)
+    }
+
+    @Test
     fun uiState_buildsZeroFilledHistorySections() = runTest(dispatcher) {
         repository.seedTodayCount(3)
         repository.seedHistory(

@@ -3,7 +3,9 @@ package com.gsusmonzon.coffeecounter.ui.settings
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,29 +14,31 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.BuildConfig
+import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
@@ -59,7 +63,7 @@ class SettingsViewModel(
         SettingsUiState(
             versionName = versionName,
             isAddWidgetVisible = !widgetPinRequester.hasActiveWidget(),
-        )
+        ),
     )
         private set
 
@@ -128,7 +132,7 @@ fun SettingsRoute(
             coffeeRepository = appContainer.coffeeRepository,
             widgetPinRequester = widgetPinRequester,
             widgetUpdater = widgetUpdater,
-        )
+        ),
     )
 
     DisposableEffect(lifecycleOwner, viewModel) {
@@ -167,39 +171,43 @@ fun SettingsScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         if (uiState.isAddWidgetVisible) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
+                SettingsCard(
+                    title = stringResource(R.string.add_widget_label),
+                    supporting = stringResource(R.string.add_widget_supporting_text),
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                            .padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.End,
                     ) {
-                        Text(
-                            text = stringResource(R.string.add_widget_label),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.add_widget_supporting_text),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
                         Button(
+                            modifier = Modifier.testTag(UiTestTags.SETTINGS_ADD_WIDGET_BUTTON),
                             onClick = onAddWidgetClick,
-                            modifier = Modifier
-                                .padding(top = 12.dp)
-                                .testTag(UiTestTags.SETTINGS_ADD_WIDGET_BUTTON),
                         ) {
                             Text(text = stringResource(R.string.add_widget_button_label))
                         }
-                        if (uiState.isWidgetPinFallbackVisible) {
+                    }
+
+                    if (uiState.isWidgetPinFallbackVisible) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                        ) {
                             Text(
                                 text = stringResource(R.string.add_widget_fallback_message),
+                                modifier = Modifier.padding(14.dp),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -208,46 +216,50 @@ fun SettingsScreen(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
+            SettingsCard(
+                title = stringResource(R.string.app_version_label),
+                supporting = stringResource(R.string.app_version_supporting_text),
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                        .padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = stringResource(R.string.app_version_label),
-                        style = MaterialTheme.typography.titleMedium,
+                        text = stringResource(R.string.app_version_value_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = uiState.versionName,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
             }
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
+            SettingsCard(
+                title = stringResource(R.string.delete_all_history_label),
+                supporting = stringResource(R.string.delete_all_history_supporting_text),
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                titleColor = MaterialTheme.colorScheme.onErrorContainer,
+                supportingColor = MaterialTheme.colorScheme.onErrorContainer,
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                        .padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.End,
                 ) {
-                    Text(
-                        text = stringResource(R.string.delete_all_history_label),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
                     Button(
-                        onClick = onDeleteHistoryClick,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError,
                         ),
-                        modifier = Modifier
-                            .padding(top = 12.dp)
-                            .testTag(UiTestTags.SETTINGS_RESET_BUTTON),
+                        modifier = Modifier.testTag(UiTestTags.SETTINGS_RESET_BUTTON),
+                        onClick = onDeleteHistoryClick,
                     ) {
                         Text(text = stringResource(R.string.delete_all_history_button_label))
                     }
@@ -272,6 +284,43 @@ fun SettingsScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun SettingsCard(
+    title: String,
+    supporting: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    supportingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = titleColor,
+            )
+            Text(
+                text = supporting,
+                style = MaterialTheme.typography.bodyMedium,
+                color = supportingColor,
+            )
+            content()
+        }
     }
 }
 

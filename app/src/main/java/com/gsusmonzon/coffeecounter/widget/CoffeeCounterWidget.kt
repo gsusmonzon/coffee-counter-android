@@ -18,21 +18,25 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.color.ColorProvider as DayNightColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.gsusmonzon.coffeecounter.MainActivity
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import kotlinx.coroutines.runBlocking
 
@@ -65,6 +69,7 @@ class CoffeeCounterWidgetReceiver : GlanceAppWidgetReceiver() {
             Intent.ACTION_DATE_CHANGED,
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
         )
     }
 }
@@ -91,6 +96,7 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(WidgetColors.surface)
+            .cornerRadius(28.dp)
             .padding(10.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
@@ -124,22 +130,51 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
             }
         }
 
-        Box(
+        Column(
             modifier = GlanceModifier
-                .width(40.dp)
-                .fillMaxHeight()
-                .background(WidgetColors.primary)
-                .clickable(onClick = actionRunCallback<UndoCoffeeAction>()),
-            contentAlignment = Alignment.Center,
+                .width(32.dp)
+                .fillMaxHeight(),
+            verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
-            Text(
-                text = "−",
-                style = TextStyle(
-                    color = WidgetColors.onPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .background(WidgetColors.actionSurface)
+                    .cornerRadius(16.dp)
+                    .clickable(onClick = actionRunCallback<OpenAppAction>()),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "↗",
+                    style = TextStyle(
+                        color = WidgetColors.actionContent,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
+
+            Spacer(modifier = GlanceModifier.height(8.dp))
+
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .background(WidgetColors.actionSurface)
+                    .cornerRadius(16.dp)
+                    .clickable(onClick = actionRunCallback<UndoCoffeeAction>()),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "−",
+                    style = TextStyle(
+                        color = WidgetColors.actionContent,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
         }
     }
 }
@@ -161,6 +196,19 @@ class UndoCoffeeAction : ActionCallback {
         parameters: ActionParameters,
     ) {
         CoffeeWidgetActionHandler.from(context).undoCoffee()
+    }
+}
+
+class OpenAppAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: androidx.glance.GlanceId,
+        parameters: ActionParameters,
+    ) {
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(launchIntent)
     }
 }
 
@@ -250,6 +298,14 @@ private object WidgetColors {
     val onPrimary: ColorProvider = DayNightColorProvider(
         day = Color(0xFFFFF8F3),
         night = Color(0xFF2A211B),
+    )
+    val actionSurface: ColorProvider = DayNightColorProvider(
+        day = Color(0x1F5C3B22),
+        night = Color(0x33E6C7A8),
+    )
+    val actionContent: ColorProvider = DayNightColorProvider(
+        day = Color(0xFF5C3B22),
+        night = Color(0xFFE6C7A8),
     )
     val label: ColorProvider = DayNightColorProvider(
         day = Color(0xFF7A6553),

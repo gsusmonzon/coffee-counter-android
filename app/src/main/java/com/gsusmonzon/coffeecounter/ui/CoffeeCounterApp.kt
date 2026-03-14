@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,12 +35,12 @@ enum class TopLevelDestination(
 ) {
     HOME(
         labelRes = R.string.home_label,
-        iconRes = R.drawable.ic_home,
+        iconRes = R.drawable.ic_coffee,
         testTag = UiTestTags.NAV_HOME,
     ),
     SETTINGS(
         labelRes = R.string.settings_label,
-        iconRes = R.drawable.ic_account_box,
+        iconRes = R.drawable.ic_settings,
         testTag = UiTestTags.NAV_SETTINGS,
     ),
 }
@@ -49,25 +52,37 @@ fun CoffeeCounterApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(currentDestination.labelRes)) }
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
+                title = { Text(text = stringResource(currentDestination.labelRes)) },
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
                 TopLevelDestination.entries.forEach { destination ->
                     NavigationBarItem(
                         modifier = Modifier.testTag(destination.testTag),
                         selected = destination == currentDestination,
                         onClick = { currentDestination = destination },
+                        alwaysShowLabel = false,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            indicatorColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                         icon = {
                             Icon(
                                 painter = painterResource(destination.iconRes),
                                 contentDescription = stringResource(destination.labelRes),
                             )
                         },
-                        label = { Text(text = stringResource(destination.labelRes)) },
                     )
                 }
             }
