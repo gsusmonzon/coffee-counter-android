@@ -11,7 +11,7 @@ import org.junit.Test
 
 class CoffeeWidgetActionHandlerTest {
     @Test
-    fun addCoffee_updatesRepositoryRefreshesWidgetAndVibrates() = runBlocking {
+    fun addCoffee_updatesRepositoryRefreshesWidgetAndRunsAddFeedback() = runBlocking {
         val repository = FakeCoffeeRepository()
         val updater = FakeCoffeeWidgetUpdater()
         val feedback = FakeCoffeeWidgetFeedbackPerformer()
@@ -21,11 +21,12 @@ class CoffeeWidgetActionHandlerTest {
         assertEquals(1, repository.incrementCalls)
         assertEquals(0, repository.decrementCalls)
         assertEquals(1, updater.refreshCalls)
-        assertEquals(1, feedback.feedbackCalls)
+        assertEquals(1, feedback.addFeedbackCalls)
+        assertEquals(0, feedback.undoFeedbackCalls)
     }
 
     @Test
-    fun undoCoffee_updatesRepositoryRefreshesWidgetAndVibrates() = runBlocking {
+    fun undoCoffee_updatesRepositoryRefreshesWidgetAndRunsUndoFeedback() = runBlocking {
         val repository = FakeCoffeeRepository()
         val updater = FakeCoffeeWidgetUpdater()
         val feedback = FakeCoffeeWidgetFeedbackPerformer()
@@ -35,7 +36,8 @@ class CoffeeWidgetActionHandlerTest {
         assertEquals(0, repository.incrementCalls)
         assertEquals(1, repository.decrementCalls)
         assertEquals(1, updater.refreshCalls)
-        assertEquals(1, feedback.feedbackCalls)
+        assertEquals(0, feedback.addFeedbackCalls)
+        assertEquals(1, feedback.undoFeedbackCalls)
     }
 }
 
@@ -81,9 +83,14 @@ private class FakeCoffeeWidgetUpdater : CoffeeWidgetUpdater {
 }
 
 private class FakeCoffeeWidgetFeedbackPerformer : CoffeeWidgetFeedbackPerformer {
-    var feedbackCalls: Int = 0
+    var addFeedbackCalls: Int = 0
+    var undoFeedbackCalls: Int = 0
 
-    override fun performActionFeedback() {
-        feedbackCalls += 1
+    override fun performAddFeedback() {
+        addFeedbackCalls += 1
+    }
+
+    override fun performUndoFeedback() {
+        undoFeedbackCalls += 1
     }
 }

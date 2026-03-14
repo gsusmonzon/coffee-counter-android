@@ -8,6 +8,7 @@ import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import com.gsusmonzon.coffeecounter.data.repository.RoomCoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
+import com.gsusmonzon.coffeecounter.feedback.ClackSoundPlayer
 import com.gsusmonzon.coffeecounter.reminder.AlarmManagerLateLogReminderScheduler
 
 class CoffeeCounterApplication : Application() {
@@ -17,6 +18,7 @@ class CoffeeCounterApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        ClackSoundPlayer(this).preload()
         AlarmManagerLateLogReminderScheduler(this).scheduleNextReminder()
     }
 }

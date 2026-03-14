@@ -44,6 +44,8 @@ import com.gsusmonzon.coffeecounter.MainActivity
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.feedback.ClackSoundPlayer
+import com.gsusmonzon.coffeecounter.feedback.CoffeeDoseSoundPlayer
 import kotlinx.coroutines.runBlocking
 
 class CoffeeCounterWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -230,13 +232,13 @@ internal class CoffeeWidgetActionHandler(
     suspend fun addCoffee() {
         repository.incrementToday()
         widgetUpdater.refresh()
-        feedbackPerformer.performActionFeedback()
+        feedbackPerformer.performAddFeedback()
     }
 
     suspend fun undoCoffee() {
         repository.decrementToday()
         widgetUpdater.refresh()
-        feedbackPerformer.performActionFeedback()
+        feedbackPerformer.performUndoFeedback()
     }
 
     companion object {
@@ -247,7 +249,10 @@ internal class CoffeeWidgetActionHandler(
             return CoffeeWidgetActionHandler(
                 repository = repository,
                 widgetUpdater = GlanceCoffeeWidgetUpdater(context.applicationContext),
-                feedbackPerformer = VibrationWidgetFeedbackPerformer(context.applicationContext),
+                feedbackPerformer = CombinedCoffeeWidgetFeedbackPerformer(
+                    hapticPerformer = VibrationWidgetFeedbackPerformer(context.applicationContext),
+                    soundPerformer = ClackSoundWidgetFeedbackPerformer(context.applicationContext),
+                ),
             )
         }
     }
@@ -266,15 +271,40 @@ class GlanceCoffeeWidgetUpdater(
 }
 
 internal interface CoffeeWidgetFeedbackPerformer {
-    fun performActionFeedback()
+    fun performAddFeedback()
+
+    fun performUndoFeedback()
+}
+
+internal class CombinedCoffeeWidgetFeedbackPerformer(
+    private val hapticPerformer: CoffeeWidgetHapticPerformer,
+    private val soundPerformer: CoffeeWidgetSoundPerformer,
+) : CoffeeWidgetFeedbackPerformer {
+    override fun performAddFeedback() {
+        hapticPerformer.performHapticFeedback()
+        soundPerformer.playDoseSound()
+    }
+
+    override fun performUndoFeedback() {
+        hapticPerformer.performHapticFeedback()
+        soundPerformer.playDoseSound()
+    }
+}
+
+internal interface CoffeeWidgetHapticPerformer {
+    fun performHapticFeedback()
+}
+
+internal interface CoffeeWidgetSoundPerformer {
+    fun playDoseSound()
 }
 
 internal class VibrationWidgetFeedbackPerformer(
     context: Context,
-) : CoffeeWidgetFeedbackPerformer {
+) : CoffeeWidgetHapticPerformer {
     private val vibrator = context.getSystemService(VibratorManager::class.java).defaultVibrator
 
-    override fun performActionFeedback() {
+    override fun performHapticFeedback() {
         if (!vibrator.hasVibrator()) {
             return
         }
@@ -286,6 +316,16 @@ internal class VibrationWidgetFeedbackPerformer(
         } catch (exception: RuntimeException) {
             // Ignore runtime failures and keep widget actions functional.
         }
+    }
+}
+
+internal class ClackSoundWidgetFeedbackPerformer(
+    context: Context,
+) : CoffeeWidgetSoundPerformer {
+    private val soundPlayer: CoffeeDoseSoundPlayer = ClackSoundPlayer(context.applicationContext)
+
+    override fun playDoseSound() {
+        soundPlayer.playDoseSound()
     }
 }
 

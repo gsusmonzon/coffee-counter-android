@@ -1,6 +1,5 @@
 package com.gsusmonzon.coffeecounter.ui.home
 
-import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +38,7 @@ import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import com.gsusmonzon.coffeecounter.domain.HistoryTimelineEntry
 import com.gsusmonzon.coffeecounter.domain.buildHistorySummary
 import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
+import com.gsusmonzon.coffeecounter.feedback.ClackSoundPlayer
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
 import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import com.gsusmonzon.coffeecounter.widget.GlanceCoffeeWidgetUpdater
@@ -255,6 +255,9 @@ fun HomeRoute(
 ) {
     val context = LocalContext.current
     val appContainer = context.appContainer()
+    val soundPlayer = remember(context.applicationContext) {
+        ClackSoundPlayer(context.applicationContext)
+    }
     val widgetUpdater = remember(context.applicationContext) {
         GlanceCoffeeWidgetUpdater(context.applicationContext)
     }
@@ -269,7 +272,10 @@ fun HomeRoute(
 
     HomeScreen(
         uiState = uiState,
-        onAddCoffeeClick = viewModel::onAddCoffeeClick,
+        onAddCoffeeClick = {
+            soundPlayer.playDoseSound()
+            viewModel.onAddCoffeeClick()
+        },
         onRemoveCoffeeClick = viewModel::onRemoveCoffeeClick,
         onHistoryChartOpen = viewModel::onHistoryChartOpen,
         onHistoryChartDismiss = viewModel::onHistoryChartDismiss,
