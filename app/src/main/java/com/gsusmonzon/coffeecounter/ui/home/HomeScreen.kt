@@ -1,5 +1,7 @@
 package com.gsusmonzon.coffeecounter.ui.home
 
+import android.content.Context
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,20 +10,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
+import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class HistorySummaryUiState(
     val title: String,
@@ -30,7 +42,7 @@ data class HistorySummaryUiState(
 
 data class HomeUiState(
     val todayCount: Int = 0,
-    val todaySupportingText: String = "Manual add arrives in Phase 3.",
+    val todaySupportingText: String = "One tap logs one coffee.",
     val historySummaries: List<HistorySummaryUiState> = listOf(
         HistorySummaryUiState(
             title = "Last 7 days",
@@ -43,18 +55,48 @@ data class HomeUiState(
     ),
 )
 
-class HomeViewModel : ViewModel() {
-    var uiState by mutableStateOf(HomeUiState())
-        private set
+class HomeViewModel(
+    private val coffeeRepository: CoffeeRepository,
+) : ViewModel() {
+    val uiState: StateFlow<HomeUiState> = coffeeRepository.observeTodayCount()
+        .map { todayCount -> HomeUiState(todayCount = todayCount) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = HomeUiState(),
+        )
+
+    fun onAddCoffeeClick() {
+        viewModelScope.launch {
+            coffeeRepository.incrementToday()
+        }
+    }
+
+    companion object {
+        fun factory(
+            coffeeRepository: CoffeeRepository,
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return HomeViewModel(coffeeRepository) as T
+            }
+        }
+    }
 }
 
 @Composable
 fun HomeRoute(
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = viewModel(),
 ) {
+    val appContainer = LocalContext.current.appContainer()
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModel.factory(appContainer.coffeeRepository),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     HomeScreen(
-        uiState = viewModel.uiState,
+        uiState = uiState,
+        onAddCoffeeClick = viewModel::onAddCoffeeClick,
         modifier = modifier,
     )
 }
@@ -62,11 +104,12 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    onAddCoffeeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
@@ -97,6 +140,15 @@ fun HomeScreen(
                         fontWeight = FontWeight.Bold,
                     )
                 }
+            }
+        }
+
+        item {
+            Button(
+                onClick = onAddCoffeeClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.add_coffee_label))
             }
         }
 
@@ -134,3 +186,5 @@ private fun SectionTitle(title: String) {
         fontWeight = FontWeight.SemiBold,
     )
 }
+
+private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
