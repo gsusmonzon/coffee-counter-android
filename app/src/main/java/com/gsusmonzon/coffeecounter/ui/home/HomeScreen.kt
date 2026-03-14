@@ -30,18 +30,24 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
+import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
-import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
 import com.gsusmonzon.coffeecounter.domain.buildHistorySummary
 import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
 import java.text.DecimalFormat
+import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+private const val HISTORY_DAYS_7 = 7
+private const val HISTORY_DAYS_30 = 30
 
 data class HistorySectionUiState(
     @param:StringRes val titleRes: Int,
@@ -70,44 +76,27 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val coffeeRepository: CoffeeRepository,
-    private val localDateProvider: LocalDateProvider = SystemLocalDateProvider,
+    private val localDateProvider: LocalDateProvider,
 ) : ViewModel() {
-    val uiState: StateFlow<HomeUiState> = combine(
-        coffeeRepository.observeTodayCount(),
-        coffeeRepository.observeDailyCounts(
-            startDate = localDateProvider.today().minusDays(HISTORY_DAYS_30.toLong() - 1),
-            endDate = localDateProvider.today(),
-        ),
-    ) { todayCount, storedCounts ->
-        val today = localDateProvider.today()
-        val last30Days = buildHistoryTimeline(
-            endDate = today,
-            days = HISTORY_DAYS_30,
-            storedCounts = storedCounts,
-        )
-        val last7Days = last30Days.take(HISTORY_DAYS_7)
-        val last7DaySummary = buildHistorySummary(last7Days)
-        val last30DaySummary = buildHistorySummary(last30Days)
-
-        // Product decision: averages stay based on active coffee days, not full calendar windows.
-        HomeUiState(
-            todayCount = todayCount,
-            historySections = listOf(
-                HistorySectionUiState(
-                    titleRes = R.string.history_last_7_days_title,
-                    totalCount = last7DaySummary.totalCount,
-                    averagePerDay = last7DaySummary.averagePerActiveDay,
-                    totalCountTag = UiTestTags.HOME_7_DAY_TOTAL,
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<HomeUiState> = localDateProvider.observeToday()
+        .flatMapLatest { today ->
+            combine(
+                coffeeRepository.observeTodayCount(),
+                coffeeRepository.observeDailyCounts(
+                    startDate = today.minusDays(HISTORY_DAYS_30.toLong() - 1),
+                    endDate = today,
                 ),
-                HistorySectionUiState(
-                    titleRes = R.string.history_last_30_days_title,
-                    totalCount = last30DaySummary.totalCount,
-                    averagePerDay = last30DaySummary.averagePerActiveDay,
-                    totalCountTag = UiTestTags.HOME_30_DAY_TOTAL,
-                ),
-            ),
-        )
-    }
+            ) { todayCount, storedCounts ->
+                // Rebuild history windows from the current local day so the UI shifts forward
+                // automatically at midnight instead of waiting for a manual refresh.
+                buildHomeUiState(
+                    today = today,
+                    todayCount = todayCount,
+                    storedCounts = storedCounts,
+                )
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -121,12 +110,9 @@ class HomeViewModel(
     }
 
     companion object {
-        private const val HISTORY_DAYS_7 = 7
-        private const val HISTORY_DAYS_30 = 30
-
         fun factory(
             coffeeRepository: CoffeeRepository,
-            localDateProvider: LocalDateProvider = SystemLocalDateProvider,
+            localDateProvider: LocalDateProvider,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -145,7 +131,10 @@ fun HomeRoute(
 ) {
     val appContainer = LocalContext.current.appContainer()
     val viewModel: HomeViewModel = viewModel(
-        factory = HomeViewModel.factory(appContainer.coffeeRepository),
+        factory = HomeViewModel.factory(
+            coffeeRepository = appContainer.coffeeRepository,
+            localDateProvider = appContainer.localDateProvider,
+        ),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -259,4 +248,38 @@ private fun Context.appContainer() = (applicationContext as CoffeeCounterApplica
 private fun Double.toDisplayLabel(): String {
     val formatter = DecimalFormat("0.#")
     return formatter.format(this)
+}
+
+private fun buildHomeUiState(
+    today: LocalDate,
+    todayCount: Int,
+    storedCounts: List<DailyCount>,
+): HomeUiState {
+    val last30Days = buildHistoryTimeline(
+        endDate = today,
+        days = HISTORY_DAYS_30,
+        storedCounts = storedCounts,
+    )
+    val last7Days = last30Days.take(HISTORY_DAYS_7)
+    val last7DaySummary = buildHistorySummary(last7Days)
+    val last30DaySummary = buildHistorySummary(last30Days)
+
+    // Product decision: averages stay based on active coffee days, not full calendar windows.
+    return HomeUiState(
+        todayCount = todayCount,
+        historySections = listOf(
+            HistorySectionUiState(
+                titleRes = R.string.history_last_7_days_title,
+                totalCount = last7DaySummary.totalCount,
+                averagePerDay = last7DaySummary.averagePerActiveDay,
+                totalCountTag = UiTestTags.HOME_7_DAY_TOTAL,
+            ),
+            HistorySectionUiState(
+                titleRes = R.string.history_last_30_days_title,
+                totalCount = last30DaySummary.totalCount,
+                averagePerDay = last30DaySummary.averagePerActiveDay,
+                totalCountTag = UiTestTags.HOME_30_DAY_TOTAL,
+            ),
+        ),
+    )
 }

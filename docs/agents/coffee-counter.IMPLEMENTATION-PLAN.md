@@ -106,7 +106,7 @@ Status values for implementation:
 | 6 | Settings screen with app version and delete-all-history | Accepted | 2026-03-14 |
 | 7 | Final regression coverage and device validation | Accepted | 2026-03-14 |
 | 8 | Widget setup refinement with in-app add-widget flow | Accepted | 2026-03-14 |
-| 9 | Automatic local-day rollover for app and widget | Pending | - |
+| 9 | Automatic local-day rollover for app and widget | Accepted | 2026-03-14 |
 | 10 | UI review and polish pass | Pending | - |
 | 11 | Late-log reminder notification | Pending | - |
 | 12 | Code quality review and simplification pass | Pending | - |

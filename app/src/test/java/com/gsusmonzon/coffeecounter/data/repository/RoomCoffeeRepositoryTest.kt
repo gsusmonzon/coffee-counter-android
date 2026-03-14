@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
 import java.time.LocalDate
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -62,6 +64,23 @@ class RoomCoffeeRepositoryTest {
     }
 
     @Test
+    fun observeTodayCount_rollsOverToNewLocalDayWithoutMutatingPriorDay() = runBlocking {
+        repository.incrementToday()
+        assertEquals(1, repository.observeTodayCount().first())
+
+        localDateProvider.currentDate = LocalDate.of(2026, 3, 15)
+
+        assertEquals(0, repository.observeTodayCount().first())
+        assertEquals(
+            listOf(LocalDate.of(2026, 3, 14) to 1),
+            repository.observeDailyCounts(
+                startDate = LocalDate.of(2026, 3, 14),
+                endDate = LocalDate.of(2026, 3, 15),
+            ).first().map { it.date to it.count },
+        )
+    }
+
+    @Test
     fun observeDailyCounts_returnsOnlyStoredRowsInRange() = runBlocking {
         repository.incrementToday()
         repository.incrementToday()
@@ -101,7 +120,17 @@ class RoomCoffeeRepositoryTest {
 }
 
 private class MutableLocalDateProvider(
-    var currentDate: LocalDate,
+    initialDate: LocalDate,
 ) : LocalDateProvider {
+    var currentDate: LocalDate = initialDate
+        set(value) {
+            field = value
+            todayFlow.value = value
+        }
+
+    private val todayFlow = MutableStateFlow(initialDate)
+
     override fun today(): LocalDate = currentDate
+
+    override fun observeToday(): Flow<LocalDate> = todayFlow
 }

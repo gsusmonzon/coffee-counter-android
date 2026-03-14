@@ -1,6 +1,7 @@
 package com.gsusmonzon.coffeecounter.widget
 
 import android.content.Context
+import android.content.Intent
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.compose.runtime.collectAsState
@@ -33,9 +34,39 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
+import kotlinx.coroutines.runBlocking
 
 class CoffeeCounterWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = CoffeeCounterWidget()
+
+    internal var widgetUpdaterFactory: (Context) -> CoffeeWidgetUpdater = { context ->
+        GlanceCoffeeWidgetUpdater(context.applicationContext)
+    }
+
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
+        super.onReceive(context, intent)
+
+        if (intent.action !in ROLLOVER_REFRESH_ACTIONS) {
+            return
+        }
+
+        runBlocking {
+            // Refresh the widget when Android reports a day/time boundary change so the
+            // home screen count rolls over even if the user never opens the app.
+            widgetUpdaterFactory(context).refresh()
+        }
+    }
+
+    private companion object {
+        val ROLLOVER_REFRESH_ACTIONS = setOf(
+            Intent.ACTION_DATE_CHANGED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+        )
+    }
 }
 
 class CoffeeCounterWidget : GlanceAppWidget() {
