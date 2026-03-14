@@ -6,10 +6,13 @@ import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.glance.ColorFilter
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.GlanceAppWidget
@@ -31,6 +34,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -38,6 +42,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.gsusmonzon.coffeecounter.MainActivity
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
+import com.gsusmonzon.coffeecounter.R
 import kotlinx.coroutines.runBlocking
 
 class CoffeeCounterWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -145,13 +150,11 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                     .clickable(onClick = actionRunCallback<OpenAppAction>()),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "↗",
-                    style = TextStyle(
-                        color = WidgetColors.actionContent,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                Image(
+                    provider = ImageProvider(R.drawable.ic_open_in_new),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(18.dp),
+                    colorFilter = ColorFilter.tint(WidgetColors.actionContent),
                 )
             }
 
@@ -166,13 +169,11 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                     .clickable(onClick = actionRunCallback<UndoCoffeeAction>()),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "−",
-                    style = TextStyle(
-                        color = WidgetColors.actionContent,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                Image(
+                    provider = ImageProvider(R.drawable.ic_undo),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(18.dp),
+                    colorFilter = ColorFilter.tint(WidgetColors.actionContent),
                 )
             }
         }

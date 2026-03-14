@@ -40,7 +40,7 @@ enum class TopLevelDestination(
     ),
     SETTINGS(
         labelRes = R.string.settings_label,
-        iconRes = R.drawable.ic_settings,
+        iconRes = R.drawable.ic_more,
         testTag = UiTestTags.NAV_SETTINGS,
     ),
 }
