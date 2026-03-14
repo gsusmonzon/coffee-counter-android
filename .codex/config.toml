@@ -1,0 +1,28 @@
+# https://developers.openai.com/codex/config-sample/
+
+personality = 'pragmatic'
+
+# Reasoning effort: minimal | low | medium | high | xhigh (default: medium; `xhigh` availability is model-dependent)
+model_reasoning_effort = "high"
+
+################################################################################
+# Approval & Sandbox
+################################################################################
+
+# When to ask for command approval:
+# - untrusted: only known-safe read-only commands auto-run; others prompt
+# - on-request: model decides when to ask (default)
+# - never: never prompt (risky)
+# - { reject = { ... } }: auto-reject selected prompt categories
+
+approval_policy = "untrusted"
+
+# Filesystem/network sandbox policy for tool calls:
+# - read-only (default)
+# - workspace-write
+# - danger-full-access (no sandbox; extremely risky)
+sandbox_mode = "read-only"
+model = "gpt-5.4"
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"
