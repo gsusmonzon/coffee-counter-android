@@ -97,13 +97,37 @@ Status values for implementation:
 
 | Phase | Goal | Status | Completed on |
 |---|---|---|---|
-| 1 | Project foundation and architecture skeleton | Pending | - |
+| 1 | Project foundation and architecture skeleton | Accepted | 2026-03-14 |
 | 2 | Room-backed coffee logging and repository tests | Pending | - |
 | 3 | Home screen with today counter and manual add | Pending | - |
 | 4 | History with 7-day and 30-day zero-filled stats | Pending | - |
 | 5 | Widget add/undo flow with refresh and vibration | Pending | - |
 | 6 | Settings screen with app version and reset-all | Pending | - |
 | 7 | Final regression coverage and device validation | Pending | - |
+
+## Skill Recommendation
+
+Do not create a dedicated project skill at the start.
+
+Reason:
+- the project is still settling its real architecture, testing patterns, and widget implementation details
+- a skill is more useful once the workflow is stable and reusable rather than still evolving
+
+Recommended checkpoint:
+- reassess after Phase 3
+
+Expected trigger for creating a skill:
+- the app structure is stable enough
+- repository and testing conventions are proven
+- the `Home` screen flow is implemented
+- the remaining work starts to repeat known patterns
+
+If created after Phase 3, the skill should stay narrow and practical:
+- project workflow: `Plan > Implement > Test / Verify > Accept / Reject`
+- architecture guardrails for this repo
+- testing heuristics: fast integration-first coverage
+- widget implementation rules and verification checklist
+- release/device validation checklist for later phases
 
 ## Phases
 
