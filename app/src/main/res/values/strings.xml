@@ -6,7 +6,6 @@
     <string name="todays_coffee_label">Today\'s coffee</string>
     <string name="add_coffee_label">Add coffee</string>
     <string name="history_title">History</string>
-    <string name="history_empty_label">No history yet.</string>
     <string name="settings_about_title">About</string>
     <string name="app_version_label">App version</string>
     <string name="reset_all_label">Reset all</string>

@@ -28,4 +28,20 @@ class HistoryTimelineTest {
             timeline.map { it.date to it.count },
         )
     }
+
+    @Test
+    fun buildHistorySummary_countsOnlyDaysWithCoffeeInAverageDenominator() {
+        val summary = buildHistorySummary(
+            timeline = listOf(
+                HistoryTimelineEntry(date = LocalDate.of(2026, 3, 14), count = 4),
+                HistoryTimelineEntry(date = LocalDate.of(2026, 3, 13), count = 0),
+                HistoryTimelineEntry(date = LocalDate.of(2026, 3, 12), count = 2),
+                HistoryTimelineEntry(date = LocalDate.of(2026, 3, 11), count = 0),
+            )
+        )
+
+        assertEquals(6, summary.totalCount)
+        assertEquals(2, summary.activeDays)
+        assertEquals(3.0, summary.averagePerActiveDay, 0.0)
+    }
 }

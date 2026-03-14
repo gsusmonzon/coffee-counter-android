@@ -79,14 +79,16 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            listOf(3, 0, 1, 0, 0, 0, 0),
-            viewModel.uiState.value.historySections.first().entries.map { it.count },
+            4,
+            viewModel.uiState.value.historySections.first().totalCount,
         )
         assertEquals(
-            LocalDate.of(2026, 3, 14),
-            viewModel.uiState.value.historySections.first().entries.first().date,
+            2.0,
+            viewModel.uiState.value.historySections.first().averagePerDay,
+            0.0,
         )
-        assertEquals(30, viewModel.uiState.value.historySections.last().entries.size)
+        assertEquals(4, viewModel.uiState.value.historySections.last().totalCount)
+        assertEquals(2.0, viewModel.uiState.value.historySections.last().averagePerDay, 0.0)
     }
 }
 

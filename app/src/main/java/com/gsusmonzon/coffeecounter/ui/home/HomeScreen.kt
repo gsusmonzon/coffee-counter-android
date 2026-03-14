@@ -32,25 +32,19 @@ import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
 import com.gsusmonzon.coffeecounter.domain.HistoryTimelineEntry
+import com.gsusmonzon.coffeecounter.domain.buildHistorySummary
 import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
+import java.text.DecimalFormat
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class HistoryDayUiState(
-    val date: java.time.LocalDate,
-    val count: Int,
-)
-
 data class HistorySectionUiState(
     val title: String,
-    val entries: List<HistoryDayUiState>,
+    val totalCount: Int,
+    val averagePerDay: Double,
 )
 
 data class HomeUiState(
@@ -59,11 +53,13 @@ data class HomeUiState(
     val historySections: List<HistorySectionUiState> = listOf(
         HistorySectionUiState(
             title = "Last 7 days",
-            entries = emptyList(),
+            totalCount = 0,
+            averagePerDay = 0.0,
         ),
         HistorySectionUiState(
             title = "Last 30 days",
-            entries = emptyList(),
+            totalCount = 0,
+            averagePerDay = 0.0,
         ),
     ),
 )
@@ -85,17 +81,22 @@ class HomeViewModel(
             days = HISTORY_DAYS_30,
             storedCounts = storedCounts,
         )
+        val last7Days = last30Days.take(HISTORY_DAYS_7)
+        val last7DaySummary = buildHistorySummary(last7Days)
+        val last30DaySummary = buildHistorySummary(last30Days)
 
         HomeUiState(
             todayCount = todayCount,
             historySections = listOf(
                 HistorySectionUiState(
                     title = "Last 7 days",
-                    entries = last30Days.take(HISTORY_DAYS_7).toHistoryEntries(),
+                    totalCount = last7DaySummary.totalCount,
+                    averagePerDay = last7DaySummary.averagePerActiveDay,
                 ),
                 HistorySectionUiState(
                     title = "Last 30 days",
-                    entries = last30Days.toHistoryEntries(),
+                    totalCount = last30DaySummary.totalCount,
+                    averagePerDay = last30DaySummary.averagePerActiveDay,
                 ),
             ),
         )
@@ -205,26 +206,27 @@ fun HomeScreen(
 
         items(uiState.historySections) { section ->
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    if (section.entries.isEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = stringResource(R.string.history_empty_label),
+                            text = section.title,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = section.averagePerDay.toPerDayLabel(),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                    } else {
-                        section.entries.forEach { entry ->
-                            HistoryRow(entry = entry)
-                        }
                     }
+                    Text(
+                        text = section.totalCount.toString(),
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
         }
@@ -240,35 +242,11 @@ private fun SectionTitle(title: String) {
     )
 }
 
-@Composable
-private fun HistoryRow(entry: HistoryDayUiState) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = entry.date.toDisplayLabel(),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            text = entry.count.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
 private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
 
-private fun List<HistoryTimelineEntry>.toHistoryEntries(): List<HistoryDayUiState> {
-    return map { entry ->
-        HistoryDayUiState(
-            date = entry.date,
-            count = entry.count,
-        )
-    }
-}
+private fun Double.toPerDayLabel(): String {
+    if (this == 0.0) return "0/day"
 
-private fun java.time.LocalDate.toDisplayLabel(): String {
-    return format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+    val formatter = DecimalFormat("0.#")
+    return "${formatter.format(this)}/day"
 }
