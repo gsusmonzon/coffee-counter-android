@@ -111,7 +111,7 @@ Status values for implementation:
 | 11 | Late-log reminder notification | Accepted | 2026-03-14 |
 | 12 | Code quality review and simplification pass | Pending | - |
 | 13 | Charted history exploration screen | Accepted | 2026-03-14 |
-| 14 | Edit past days from chart | Pending | - |
+| 14 | Edit past days from chart | Accepted | 2026-03-14 |
 
 ## Skill Recommendation
 

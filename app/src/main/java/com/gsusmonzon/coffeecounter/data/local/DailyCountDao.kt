@@ -25,6 +25,9 @@ interface DailyCountDao {
     @Upsert
     suspend fun upsert(entity: DailyCountEntity)
 
+    @Query("DELETE FROM daily_counts WHERE date = :date")
+    suspend fun deleteByDate(date: String)
+
     @Query("DELETE FROM daily_counts")
     suspend fun deleteAll()
 }

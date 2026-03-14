@@ -318,12 +318,18 @@ fun SettingsScreen(
             title = { Text(text = stringResource(R.string.delete_all_history_confirmation_title)) },
             text = { Text(text = stringResource(R.string.delete_all_history_confirmation_message)) },
             confirmButton = {
-                TextButton(onClick = onConfirmDeleteHistory) {
+                TextButton(
+                    modifier = Modifier.testTag(UiTestTags.SETTINGS_RESET_CONFIRM_BUTTON),
+                    onClick = onConfirmDeleteHistory,
+                ) {
                     Text(text = stringResource(R.string.delete_all_history_confirm_label))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissDeleteHistoryConfirmation) {
+                TextButton(
+                    modifier = Modifier.testTag(UiTestTags.SETTINGS_RESET_CANCEL_BUTTON),
+                    onClick = onDismissDeleteHistoryConfirmation,
+                ) {
                     Text(text = stringResource(R.string.delete_all_history_cancel_label))
                 }
             },

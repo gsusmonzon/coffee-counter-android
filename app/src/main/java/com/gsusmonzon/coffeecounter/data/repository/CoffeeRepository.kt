@@ -20,6 +20,11 @@ interface CoffeeRepository {
         endDate: LocalDate,
     ): Flow<List<DailyCount>>
 
+    suspend fun setDailyCount(
+        date: LocalDate,
+        count: Int,
+    )
+
     suspend fun incrementToday()
 
     suspend fun decrementToday()

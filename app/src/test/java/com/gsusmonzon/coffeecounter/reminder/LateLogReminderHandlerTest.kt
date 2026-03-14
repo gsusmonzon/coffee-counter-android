@@ -67,6 +67,12 @@ private class FakeCoffeeRepository(
         endDate: LocalDate,
     ): Flow<List<DailyCount>> = emptyFlow()
 
+    override suspend fun setDailyCount(
+        date: LocalDate,
+        count: Int,
+    ) {
+    }
+
     override suspend fun incrementToday() {
     }
 

@@ -57,6 +57,18 @@ class RoomCoffeeRepository(
         }
     }
 
+    override suspend fun setDailyCount(
+        date: LocalDate,
+        count: Int,
+    ) {
+        require(count >= 0) { "count must be non-negative" }
+
+        setCount(
+            dateKey = date.toStorageKey(),
+            updatedCount = count,
+        )
+    }
+
     override suspend fun incrementToday() {
         updateTodayCount { currentCount -> currentCount + 1 }
     }
@@ -71,12 +83,28 @@ class RoomCoffeeRepository(
 
     private suspend fun updateTodayCount(transform: (Int) -> Int) {
         val dateKey = localDateProvider.today().toStorageKey()
+        val currentCount = dao.getCountForDate(dateKey)?.count ?: 0
+        val updatedCount = transform(currentCount)
 
+        setCount(
+            dateKey = dateKey,
+            updatedCount = updatedCount,
+        )
+    }
+
+    private suspend fun setCount(
+        dateKey: String,
+        updatedCount: Int,
+    ) {
         database.withTransaction {
             val current = dao.getCountForDate(dateKey)
-            val updatedCount = transform(current?.count ?: 0)
 
             if (updatedCount == 0 && current == null) {
+                return@withTransaction
+            }
+
+            if (updatedCount == 0) {
+                dao.deleteByDate(dateKey)
                 return@withTransaction
             }
 

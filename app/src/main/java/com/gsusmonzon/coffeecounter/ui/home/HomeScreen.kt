@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -39,8 +40,12 @@ import com.gsusmonzon.coffeecounter.domain.HistoryTimelineEntry
 import com.gsusmonzon.coffeecounter.domain.buildHistorySummary
 import com.gsusmonzon.coffeecounter.domain.buildHistoryTimeline
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
+import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
+import com.gsusmonzon.coffeecounter.widget.GlanceCoffeeWidgetUpdater
 import java.text.DecimalFormat
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,6 +62,8 @@ private const val HISTORY_CHART_INITIAL_DAYS = 32
 private const val HISTORY_CHART_PAGE_DAYS = 30
 private const val HISTORY_CHART_VISIBLE_BARS = 8
 
+private val HistoryEditDateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+
 data class HistorySectionUiState(
     @param:StringRes val titleRes: Int,
     val totalCount: Int,
@@ -69,12 +76,20 @@ data class HistoryChartBarUiState(
     val date: LocalDate,
     val count: Int,
     val label: String,
+    val isToday: Boolean,
 )
 
 data class HistoryChartUiState(
     val bars: List<HistoryChartBarUiState> = emptyList(),
     val maxCount: Int = 0,
     val canLoadOlder: Boolean = false,
+)
+
+data class HistoryEditDialogUiState(
+    val date: LocalDate,
+    val title: String,
+    val input: String,
+    val isSaveEnabled: Boolean,
 )
 
 data class HomeUiState(
@@ -97,14 +112,22 @@ data class HomeUiState(
     ),
     val isHistoryChartVisible: Boolean = false,
     val historyChart: HistoryChartUiState = HistoryChartUiState(),
+    val historyEditDialog: HistoryEditDialogUiState? = null,
+)
+
+private data class HistoryEditSession(
+    val date: LocalDate,
+    val input: String,
 )
 
 class HomeViewModel(
     private val coffeeRepository: CoffeeRepository,
     private val localDateProvider: LocalDateProvider,
+    private val widgetUpdater: CoffeeWidgetUpdater,
 ) : ViewModel() {
     private val isHistoryChartVisible = MutableStateFlow(false)
     private val historyChartDays = MutableStateFlow(HISTORY_CHART_INITIAL_DAYS)
+    private val historyEditSession = MutableStateFlow<HistoryEditSession?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<HomeUiState> = combine(
@@ -123,7 +146,8 @@ class HomeViewModel(
             ),
             coffeeRepository.observeOldestLoggedDate(),
             isHistoryChartVisible,
-        ) { todayCount, storedCounts, oldestLoggedDate, isChartVisible ->
+            historyEditSession,
+        ) { todayCount, storedCounts, oldestLoggedDate, isChartVisible, editSession ->
             buildHomeUiState(
                 today = today,
                 todayCount = todayCount,
@@ -131,6 +155,7 @@ class HomeViewModel(
                 oldestLoggedDate = oldestLoggedDate,
                 chartDays = chartDays,
                 isHistoryChartVisible = isChartVisible,
+                editSession = editSession,
             )
         }
     }.stateIn(
@@ -158,6 +183,7 @@ class HomeViewModel(
     fun onHistoryChartDismiss() {
         isHistoryChartVisible.value = false
         historyChartDays.value = HISTORY_CHART_INITIAL_DAYS
+        historyEditSession.value = null
     }
 
     fun onLoadOlderHistory() {
@@ -171,16 +197,50 @@ class HomeViewModel(
         }
     }
 
+    fun onHistoryBarClick(bar: HistoryChartBarUiState) {
+        historyEditSession.value = HistoryEditSession(
+            date = bar.date,
+            input = bar.count.toString(),
+        )
+    }
+
+    fun onHistoryEditInputChange(input: String) {
+        val sanitizedInput = input.filter(Char::isDigit)
+        historyEditSession.update { session ->
+            session?.copy(input = sanitizedInput)
+        }
+    }
+
+    fun onDismissHistoryEdit() {
+        historyEditSession.value = null
+    }
+
+    fun onSaveHistoryEdit() {
+        val session = historyEditSession.value ?: return
+        val parsedCount = session.input.toIntOrNull() ?: return
+
+        viewModelScope.launch {
+            coffeeRepository.setDailyCount(
+                date = session.date,
+                count = parsedCount,
+            )
+            widgetUpdater.refresh()
+            historyEditSession.value = null
+        }
+    }
+
     companion object {
         fun factory(
             coffeeRepository: CoffeeRepository,
             localDateProvider: LocalDateProvider,
+            widgetUpdater: CoffeeWidgetUpdater,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return HomeViewModel(
                     coffeeRepository = coffeeRepository,
                     localDateProvider = localDateProvider,
+                    widgetUpdater = widgetUpdater,
                 ) as T
             }
         }
@@ -191,11 +251,16 @@ class HomeViewModel(
 fun HomeRoute(
     modifier: Modifier = Modifier,
 ) {
-    val appContainer = LocalContext.current.appContainer()
+    val context = LocalContext.current
+    val appContainer = context.appContainer()
+    val widgetUpdater = remember(context.applicationContext) {
+        GlanceCoffeeWidgetUpdater(context.applicationContext)
+    }
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.factory(
             coffeeRepository = appContainer.coffeeRepository,
             localDateProvider = appContainer.localDateProvider,
+            widgetUpdater = widgetUpdater,
         ),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -207,6 +272,10 @@ fun HomeRoute(
         onHistoryChartOpen = viewModel::onHistoryChartOpen,
         onHistoryChartDismiss = viewModel::onHistoryChartDismiss,
         onLoadOlderHistory = viewModel::onLoadOlderHistory,
+        onHistoryBarClick = viewModel::onHistoryBarClick,
+        onHistoryEditInputChange = viewModel::onHistoryEditInputChange,
+        onDismissHistoryEdit = viewModel::onDismissHistoryEdit,
+        onSaveHistoryEdit = viewModel::onSaveHistoryEdit,
         modifier = modifier,
     )
 }
@@ -219,6 +288,10 @@ fun HomeScreen(
     onHistoryChartOpen: () -> Unit,
     onHistoryChartDismiss: () -> Unit,
     onLoadOlderHistory: () -> Unit,
+    onHistoryBarClick: (HistoryChartBarUiState) -> Unit,
+    onHistoryEditInputChange: (String) -> Unit,
+    onDismissHistoryEdit: () -> Unit,
+    onSaveHistoryEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -259,6 +332,16 @@ fun HomeScreen(
             uiState = uiState.historyChart,
             onDismissRequest = onHistoryChartDismiss,
             onLoadOlderHistory = onLoadOlderHistory,
+            onHistoryBarClick = onHistoryBarClick,
+        )
+    }
+
+    uiState.historyEditDialog?.let { historyEditDialog ->
+        HistoryEditDialog(
+            uiState = historyEditDialog,
+            onValueChange = onHistoryEditInputChange,
+            onDismissRequest = onDismissHistoryEdit,
+            onSaveClick = onSaveHistoryEdit,
         )
     }
 }
@@ -428,6 +511,7 @@ private fun buildHomeUiState(
     oldestLoggedDate: LocalDate?,
     chartDays: Int,
     isHistoryChartVisible: Boolean,
+    editSession: HistoryEditSession?,
 ): HomeUiState {
     val last30Days = buildHistoryTimeline(
         endDate = today,
@@ -465,18 +549,37 @@ private fun buildHomeUiState(
         ),
         isHistoryChartVisible = isHistoryChartVisible,
         historyChart = HistoryChartUiState(
-            bars = chartTimeline.map(::toHistoryChartBarUiState),
+            bars = chartTimeline.map { entry ->
+                toHistoryChartBarUiState(
+                    entry = entry,
+                    today = today,
+                )
+            },
             maxCount = chartTimeline.maxOfOrNull(HistoryTimelineEntry::count)?.coerceAtLeast(1) ?: 1,
             canLoadOlder = oldestLoggedDate != null && chartStartDate > oldestLoggedDate,
         ),
+        historyEditDialog = editSession?.toHistoryEditDialogUiState(),
     )
 }
 
-private fun toHistoryChartBarUiState(entry: HistoryTimelineEntry): HistoryChartBarUiState {
+private fun toHistoryChartBarUiState(
+    entry: HistoryTimelineEntry,
+    today: LocalDate,
+): HistoryChartBarUiState {
     return HistoryChartBarUiState(
         date = entry.date,
         count = entry.count,
         label = entry.date.dayOfMonth.toString(),
+        isToday = entry.date == today,
+    )
+}
+
+private fun HistoryEditSession.toHistoryEditDialogUiState(): HistoryEditDialogUiState {
+    return HistoryEditDialogUiState(
+        date = date,
+        title = HistoryEditDateFormatter.format(date),
+        input = input,
+        isSaveEnabled = input.toIntOrNull() != null,
     )
 }
 

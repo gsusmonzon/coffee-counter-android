@@ -178,6 +178,24 @@ private class FakeCoffeeRepository : CoffeeRepository {
         }
     }
 
+    override suspend fun setDailyCount(
+        date: LocalDate,
+        count: Int,
+    ) {
+        dailyCounts.value = dailyCounts.value
+            .filterNot { dailyCount -> dailyCount.date == date }
+            .let { counts ->
+                if (count == 0) {
+                    counts
+                } else {
+                    counts + DailyCount(date = date, count = count)
+                }
+            }
+        if (date == LocalDate.of(2026, 3, 14)) {
+            todayCount.value = count
+        }
+    }
+
     override suspend fun incrementToday() {
         todayCount.value += 1
     }

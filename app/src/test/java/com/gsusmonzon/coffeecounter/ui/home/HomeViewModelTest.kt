@@ -3,12 +3,13 @@ package com.gsusmonzon.coffeecounter.ui.home
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
+import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,12 +26,14 @@ class HomeViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var localDateProvider: MutableLocalDateProvider
     private lateinit var repository: FakeCoffeeRepository
+    private lateinit var widgetUpdater: FakeCoffeeWidgetUpdater
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         localDateProvider = MutableLocalDateProvider(LocalDate.of(2026, 3, 14))
         repository = FakeCoffeeRepository(localDateProvider)
+        widgetUpdater = FakeCoffeeWidgetUpdater()
     }
 
     @After
@@ -42,10 +45,7 @@ class HomeViewModelTest {
     fun uiState_reflectsRepositoryTodayCount() = runTest(dispatcher) {
         repository.seedTodayCount(3)
 
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
         assertEquals(3, viewModel.uiState.value.todayCount)
@@ -53,10 +53,7 @@ class HomeViewModelTest {
 
     @Test
     fun onAddCoffeeClick_incrementsTodayCount() = runTest(dispatcher) {
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onAddCoffeeClick()
         advanceUntilIdle()
@@ -69,10 +66,7 @@ class HomeViewModelTest {
     fun onRemoveCoffeeClick_decrementsTodayCountWithoutGoingNegative() = runTest(dispatcher) {
         repository.seedTodayCount(2)
 
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onRemoveCoffeeClick()
         advanceUntilIdle()
@@ -98,21 +92,11 @@ class HomeViewModelTest {
             )
         )
 
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
-        assertEquals(
-            4,
-            viewModel.uiState.value.historySections.first().totalCount,
-        )
-        assertEquals(
-            2.0,
-            viewModel.uiState.value.historySections.first().averagePerDay,
-            0.0,
-        )
+        assertEquals(4, viewModel.uiState.value.historySections.first().totalCount)
+        assertEquals(2.0, viewModel.uiState.value.historySections.first().averagePerDay, 0.0)
         assertEquals(4, viewModel.uiState.value.historySections.last().totalCount)
         assertEquals(2.0, viewModel.uiState.value.historySections.last().averagePerDay, 0.0)
     }
@@ -127,10 +111,7 @@ class HomeViewModelTest {
         )
         repository.seedTodayCount(3)
 
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
         localDateProvider.currentDate = LocalDate.of(2026, 3, 15)
@@ -149,10 +130,7 @@ class HomeViewModelTest {
                 DailyCount(date = LocalDate.of(2026, 2, 10), count = 2),
             )
         )
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
         viewModel.onHistoryChartOpen()
@@ -172,14 +150,11 @@ class HomeViewModelTest {
                 DailyCount(date = LocalDate.of(2026, 1, 20), count = 2),
             )
         )
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
-        advanceUntilIdle()
-        viewModel.onHistoryChartOpen()
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
+        viewModel.onHistoryChartOpen()
+        advanceUntilIdle()
         viewModel.onLoadOlderHistory()
         advanceUntilIdle()
 
@@ -188,27 +163,113 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun onHistoryChartDismiss_resetsChartState() = runTest(dispatcher) {
+    fun onHistoryBarClick_opensEditDialogWithSelectedCount() = runTest(dispatcher) {
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel.onHistoryBarClick(
+            HistoryChartBarUiState(
+                date = LocalDate.of(2026, 3, 10),
+                count = 3,
+                label = "10",
+                isToday = false,
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals("3", viewModel.uiState.value.historyEditDialog?.input)
+        assertEquals(LocalDate.of(2026, 3, 10), viewModel.uiState.value.historyEditDialog?.date)
+    }
+
+    @Test
+    fun onSaveHistoryEdit_updatesExactDayAndRefreshesWidget() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 10), count = 1),
+            )
+        )
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel.onHistoryBarClick(
+            HistoryChartBarUiState(
+                date = LocalDate.of(2026, 3, 10),
+                count = 1,
+                label = "10",
+                isToday = false,
+            )
+        )
+        viewModel.onHistoryEditInputChange("4")
+        viewModel.onSaveHistoryEdit()
+        advanceUntilIdle()
+
+        assertEquals(4, repository.countFor(LocalDate.of(2026, 3, 10)))
+        assertEquals(1, widgetUpdater.refreshCalls)
+        assertEquals(null, viewModel.uiState.value.historyEditDialog)
+    }
+
+    @Test
+    fun onSaveHistoryEdit_withZeroDeletesStoredRow() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 10), count = 2),
+            )
+        )
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel.onHistoryBarClick(
+            HistoryChartBarUiState(
+                date = LocalDate.of(2026, 3, 10),
+                count = 2,
+                label = "10",
+                isToday = false,
+            )
+        )
+        viewModel.onHistoryEditInputChange("0")
+        viewModel.onSaveHistoryEdit()
+        advanceUntilIdle()
+
+        assertEquals(0, repository.countFor(LocalDate.of(2026, 3, 10)))
+        assertEquals(emptyList<DailyCount>(), repository.observeStoredCounts())
+    }
+
+    @Test
+    fun onHistoryChartDismiss_resetsChartAndDialogState() = runTest(dispatcher) {
         repository.seedHistory(
             listOf(
                 DailyCount(date = LocalDate.of(2026, 3, 14), count = 4),
                 DailyCount(date = LocalDate.of(2026, 1, 20), count = 2),
             )
         )
-        val viewModel = HomeViewModel(
-            coffeeRepository = repository,
-            localDateProvider = localDateProvider,
-        )
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
         viewModel.onHistoryChartOpen()
         viewModel.onLoadOlderHistory()
+        viewModel.onHistoryBarClick(
+            HistoryChartBarUiState(
+                date = LocalDate.of(2026, 3, 10),
+                count = 2,
+                label = "10",
+                isToday = false,
+            )
+        )
         advanceUntilIdle()
         viewModel.onHistoryChartDismiss()
         advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.value.isHistoryChartVisible)
         assertEquals(32, viewModel.uiState.value.historyChart.bars.size)
+        assertEquals(null, viewModel.uiState.value.historyEditDialog)
+    }
+
+    private fun newViewModel(): HomeViewModel {
+        return HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = localDateProvider,
+            widgetUpdater = widgetUpdater,
+        )
     }
 }
 
@@ -242,6 +303,21 @@ private class FakeCoffeeRepository(
             }
     }
 
+    override suspend fun setDailyCount(
+        date: LocalDate,
+        count: Int,
+    ) {
+        require(count >= 0)
+
+        dailyCounts.value = dailyCounts.value.toMutableMap().apply {
+            if (count == 0) {
+                remove(date)
+            } else {
+                this[date] = count
+            }
+        }
+    }
+
     override suspend fun incrementToday() {
         val today = localDateProvider.today()
         dailyCounts.value = dailyCounts.value.toMutableMap().apply {
@@ -253,7 +329,11 @@ private class FakeCoffeeRepository(
         val today = localDateProvider.today()
         val currentCount = dailyCounts.value[today] ?: 0
         dailyCounts.value = dailyCounts.value.toMutableMap().apply {
-            this[today] = (currentCount - 1).coerceAtLeast(0)
+            if (currentCount <= 1) {
+                remove(today)
+            } else {
+                this[today] = currentCount - 1
+            }
         }
     }
 
@@ -274,10 +354,20 @@ private class FakeCoffeeRepository(
 
     fun todayCount(): Int = dailyCounts.value[localDateProvider.today()] ?: 0
 
-    private fun observeStoredCounts(): List<DailyCount> {
+    fun countFor(date: LocalDate): Int = dailyCounts.value[date] ?: 0
+
+    fun observeStoredCounts(): List<DailyCount> {
         return dailyCounts.value.entries
             .sortedBy { (date, _) -> date }
             .map { (date, count) -> DailyCount(date = date, count = count) }
+    }
+}
+
+private class FakeCoffeeWidgetUpdater : CoffeeWidgetUpdater {
+    var refreshCalls: Int = 0
+
+    override suspend fun refresh() {
+        refreshCalls += 1
     }
 }
 

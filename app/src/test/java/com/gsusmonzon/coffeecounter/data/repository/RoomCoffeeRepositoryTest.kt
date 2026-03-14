@@ -116,6 +116,33 @@ class RoomCoffeeRepositoryTest {
     }
 
     @Test
+    fun setDailyCount_updatesSpecificDayAndDeletesRowWhenZero() = runBlocking {
+        repository.setDailyCount(LocalDate.of(2026, 3, 10), 3)
+        repository.setDailyCount(LocalDate.of(2026, 3, 14), 2)
+
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 3, 10) to 3,
+                LocalDate.of(2026, 3, 14) to 2,
+            ),
+            repository.observeDailyCounts(
+                startDate = LocalDate.of(2026, 3, 10),
+                endDate = LocalDate.of(2026, 3, 14),
+            ).first().map { it.date to it.count },
+        )
+
+        repository.setDailyCount(LocalDate.of(2026, 3, 10), 0)
+
+        assertEquals(
+            listOf(LocalDate.of(2026, 3, 14) to 2),
+            repository.observeDailyCounts(
+                startDate = LocalDate.of(2026, 3, 10),
+                endDate = LocalDate.of(2026, 3, 14),
+            ).first().map { it.date to it.count },
+        )
+    }
+
+    @Test
     fun resetAll_clearsStoredCounts() = runBlocking {
         repository.incrementToday()
 

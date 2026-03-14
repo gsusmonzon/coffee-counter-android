@@ -1,6 +1,7 @@
 package com.gsusmonzon.coffeecounter.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -50,6 +50,7 @@ fun HistoryChartBottomSheet(
     uiState: HistoryChartUiState,
     onDismissRequest: () -> Unit,
     onLoadOlderHistory: () -> Unit,
+    onHistoryBarClick: (HistoryChartBarUiState) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val loadOlderHistory by rememberUpdatedState(onLoadOlderHistory)
@@ -128,6 +129,7 @@ fun HistoryChartBottomSheet(
                         HistoryChartBar(
                             bar = bar,
                             maxCount = uiState.maxCount,
+                            onClick = { onHistoryBarClick(bar) },
                         )
                     }
                 }
@@ -140,6 +142,7 @@ fun HistoryChartBottomSheet(
 private fun HistoryChartBar(
     bar: HistoryChartBarUiState,
     maxCount: Int,
+    onClick: () -> Unit,
 ) {
     val maxBarCount = maxCount.coerceAtLeast(1)
     val barHeight = if (bar.count == 0) {
@@ -150,7 +153,16 @@ private fun HistoryChartBar(
     }
 
     Column(
-        modifier = Modifier.width(ChartColumnWidth),
+        modifier = Modifier
+            .width(ChartColumnWidth)
+            .clickable(onClick = onClick)
+            .then(
+                if (bar.isToday) {
+                    Modifier.testTag(UiTestTags.HOME_HISTORY_CHART_TODAY_BAR)
+                } else {
+                    Modifier
+                }
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
