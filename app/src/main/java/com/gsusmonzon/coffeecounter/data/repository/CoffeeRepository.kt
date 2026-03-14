@@ -9,6 +9,8 @@ interface CoffeeRepository {
 
     suspend fun getTodayCount(): Int
 
+    fun observeOldestLoggedDate(): Flow<LocalDate?>
+
     /**
      * Returns stored rows in the inclusive range from [startDate] to [endDate].
      * Missing dates are handled by higher-level history logic.

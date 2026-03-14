@@ -34,6 +34,12 @@ class RoomCoffeeRepository(
         return dao.getCountForDate(dateKey)?.count ?: 0
     }
 
+    override fun observeOldestLoggedDate(): Flow<LocalDate?> {
+        return dao.observeOldestLoggedDate().map { storedDate ->
+            storedDate?.let(LocalDate::parse)
+        }
+    }
+
     override fun observeDailyCounts(
         startDate: LocalDate,
         endDate: LocalDate,

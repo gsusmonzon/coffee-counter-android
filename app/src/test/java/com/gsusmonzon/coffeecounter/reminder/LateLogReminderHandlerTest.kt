@@ -60,6 +60,8 @@ private class FakeCoffeeRepository(
 
     override suspend fun getTodayCount(): Int = todayCount
 
+    override fun observeOldestLoggedDate(): Flow<LocalDate?> = emptyFlow()
+
     override fun observeDailyCounts(
         startDate: LocalDate,
         endDate: LocalDate,

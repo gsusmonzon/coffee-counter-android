@@ -111,6 +111,7 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                 .fillMaxHeight()
                 .background(WidgetColors.surface)
                 .clickable(onClick = actionRunCallback<AddCoffeeAction>())
+                .cornerRadius(22.dp)
                 .padding(end = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
@@ -146,8 +147,8 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                     .fillMaxWidth()
                     .height(32.dp)
                     .background(WidgetColors.actionSurface)
-                    .cornerRadius(16.dp)
-                    .clickable(onClick = actionRunCallback<OpenAppAction>()),
+                    .clickable(onClick = actionRunCallback<OpenAppAction>())
+                    .cornerRadius(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -165,8 +166,8 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                     .fillMaxWidth()
                     .height(32.dp)
                     .background(WidgetColors.actionSurface)
-                    .cornerRadius(16.dp)
-                    .clickable(onClick = actionRunCallback<UndoCoffeeAction>()),
+                    .clickable(onClick = actionRunCallback<UndoCoffeeAction>())
+                    .cornerRadius(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(

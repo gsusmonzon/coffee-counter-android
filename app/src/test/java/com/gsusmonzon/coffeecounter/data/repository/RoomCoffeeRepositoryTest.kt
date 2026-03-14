@@ -103,6 +103,19 @@ class RoomCoffeeRepositoryTest {
     }
 
     @Test
+    fun observeOldestLoggedDate_returnsEarliestStoredDay() = runBlocking {
+        repository.incrementToday()
+
+        localDateProvider.currentDate = LocalDate.of(2026, 3, 10)
+        repository.incrementToday()
+
+        assertEquals(
+            LocalDate.of(2026, 3, 10),
+            repository.observeOldestLoggedDate().first(),
+        )
+    }
+
+    @Test
     fun resetAll_clearsStoredCounts() = runBlocking {
         repository.incrementToday()
 
@@ -116,6 +129,7 @@ class RoomCoffeeRepositoryTest {
                 endDate = LocalDate.of(2026, 3, 14),
             ).first().map { it.date to it.count },
         )
+        assertEquals(null, repository.observeOldestLoggedDate().first())
     }
 }
 

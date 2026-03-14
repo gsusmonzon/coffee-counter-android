@@ -16,6 +16,9 @@ interface DailyCountDao {
         endDate: String,
     ): Flow<List<DailyCountEntity>>
 
+    @Query("SELECT MIN(date) FROM daily_counts")
+    fun observeOldestLoggedDate(): Flow<String?>
+
     @Query("SELECT * FROM daily_counts WHERE date = :date")
     suspend fun getCountForDate(date: String): DailyCountEntity?
 

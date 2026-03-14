@@ -140,6 +140,76 @@ class HomeViewModelTest {
         assertEquals(3, viewModel.uiState.value.historySections.first().totalCount)
         assertEquals(5, viewModel.uiState.value.historySections.last().totalCount)
     }
+
+    @Test
+    fun onHistoryChartOpen_showsRecentChartWindow() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 14), count = 4),
+                DailyCount(date = LocalDate.of(2026, 2, 10), count = 2),
+            )
+        )
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = localDateProvider,
+        )
+        advanceUntilIdle()
+
+        viewModel.onHistoryChartOpen()
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel.uiState.value.isHistoryChartVisible)
+        assertEquals(32, viewModel.uiState.value.historyChart.bars.size)
+        assertEquals(true, viewModel.uiState.value.historyChart.canLoadOlder)
+        assertEquals(LocalDate.of(2026, 3, 14), viewModel.uiState.value.historyChart.bars.last().date)
+    }
+
+    @Test
+    fun onLoadOlderHistory_expandsChartRangeBackward() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 14), count = 4),
+                DailyCount(date = LocalDate.of(2026, 1, 20), count = 2),
+            )
+        )
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = localDateProvider,
+        )
+        advanceUntilIdle()
+        viewModel.onHistoryChartOpen()
+        advanceUntilIdle()
+
+        viewModel.onLoadOlderHistory()
+        advanceUntilIdle()
+
+        assertEquals(62, viewModel.uiState.value.historyChart.bars.size)
+        assertEquals(LocalDate.of(2026, 1, 12), viewModel.uiState.value.historyChart.bars.first().date)
+    }
+
+    @Test
+    fun onHistoryChartDismiss_resetsChartState() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 14), count = 4),
+                DailyCount(date = LocalDate.of(2026, 1, 20), count = 2),
+            )
+        )
+        val viewModel = HomeViewModel(
+            coffeeRepository = repository,
+            localDateProvider = localDateProvider,
+        )
+        advanceUntilIdle()
+
+        viewModel.onHistoryChartOpen()
+        viewModel.onLoadOlderHistory()
+        advanceUntilIdle()
+        viewModel.onHistoryChartDismiss()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.isHistoryChartVisible)
+        assertEquals(32, viewModel.uiState.value.historyChart.bars.size)
+    }
 }
 
 private class FakeCoffeeRepository(
@@ -155,6 +225,10 @@ private class FakeCoffeeRepository(
     }
 
     override suspend fun getTodayCount(): Int = dailyCounts.value[localDateProvider.today()] ?: 0
+
+    override fun observeOldestLoggedDate(): Flow<LocalDate?> = dailyCounts.map { counts ->
+        counts.keys.minOrNull()
+    }
 
     override fun observeDailyCounts(
         startDate: LocalDate,

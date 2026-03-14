@@ -110,7 +110,7 @@ Status values for implementation:
 | 10 | UI review and polish pass | Accepted | 2026-03-14 |
 | 11 | Late-log reminder notification | Accepted | 2026-03-14 |
 | 12 | Code quality review and simplification pass | Pending | - |
-| 13 | Charted history exploration screen | Pending | - |
+| 13 | Charted history exploration screen | Accepted | 2026-03-14 |
 | 14 | Edit past days from chart | Pending | - |
 
 ## Skill Recommendation

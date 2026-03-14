@@ -85,4 +85,13 @@ class AppFlowsInstrumentedTest {
         composeRule.onNodeWithTag(UiTestTags.HOME_7_DAY_TOTAL).assertTextEquals("0")
         composeRule.onNodeWithTag(UiTestTags.HOME_30_DAY_TOTAL).assertTextEquals("0")
     }
+
+    @Test
+    fun tappingHistoryCard_opensChartBottomSheet() {
+        composeRule.onNodeWithTag(UiTestTags.HOME_30_DAY_CARD).performClick()
+        composeRule.onNodeWithTag(UiTestTags.HOME_HISTORY_CHART).assertIsDisplayed()
+        composeRule.onNodeWithText(
+            composeRule.activity.getString(R.string.history_chart_title)
+        ).assertIsDisplayed()
+    }
 }

@@ -6,6 +6,9 @@ object UiTestTags {
     const val HOME_TODAY_COUNT = "home_today_count"
     const val HOME_7_DAY_TOTAL = "home_7_day_total"
     const val HOME_30_DAY_TOTAL = "home_30_day_total"
+    const val HOME_7_DAY_CARD = "home_7_day_card"
+    const val HOME_30_DAY_CARD = "home_30_day_card"
+    const val HOME_HISTORY_CHART = "home_history_chart"
     const val SETTINGS_ADD_WIDGET_BUTTON = "settings_add_widget_button"
     const val SETTINGS_RESET_BUTTON = "settings_reset_button"
 }
