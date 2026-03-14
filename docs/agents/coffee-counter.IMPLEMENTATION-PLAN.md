@@ -102,7 +102,7 @@ Status values for implementation:
 | 3 | Home screen with today counter and manual add | Accepted | 2026-03-14 |
 | 4 | History with 7-day and 30-day zero-filled stats | Accepted | 2026-03-14 |
 | 5 | Widget add/undo flow with refresh and vibration | Accepted | 2026-03-14 |
-| 6 | Settings screen with app version and reset-all | Pending | - |
+| 6 | Settings screen with app version and reset-all | Accepted | 2026-03-14 |
 | 7 | Final regression coverage and device validation | Pending | - |
 | 8 | Widget setup refinement with in-app add-widget flow | Pending | - |
 

@@ -11,4 +11,10 @@
     <string name="settings_about_title">About</string>
     <string name="app_version_label">App version</string>
     <string name="reset_all_label">Reset all</string>
+    <string name="reset_all_supporting_text">Delete the full coffee history and reset today to 0.</string>
+    <string name="reset_all_button_label">Reset all data</string>
+    <string name="reset_all_confirmation_title">Reset all data?</string>
+    <string name="reset_all_confirmation_message">This deletes your full coffee history and resets today to 0. This cannot be undone.</string>
+    <string name="reset_all_confirm_label">Reset all</string>
+    <string name="reset_all_cancel_label">Cancel</string>
 </resources>

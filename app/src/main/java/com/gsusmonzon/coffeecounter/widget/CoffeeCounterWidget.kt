@@ -181,11 +181,11 @@ internal class CoffeeRepositoryWidgetActions(
     }
 }
 
-internal interface CoffeeWidgetUpdater {
+interface CoffeeWidgetUpdater {
     suspend fun refresh()
 }
 
-internal class GlanceCoffeeWidgetUpdater(
+class GlanceCoffeeWidgetUpdater(
     private val context: Context,
 ) : CoffeeWidgetUpdater {
     override suspend fun refresh() {
