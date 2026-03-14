@@ -12,13 +12,15 @@
     <string name="history_last_7_days_title">Last 7 days</string>
     <string name="history_last_30_days_title">Last 30 days</string>
     <string name="history_average_per_active_day_label">%1$s/day on coffee days</string>
-    <string name="settings_about_title">About</string>
+    <string name="add_widget_label">Home screen widget</string>
+    <string name="add_widget_supporting_text">Pin the coffee widget so you can log with one tap from your launcher.</string>
+    <string name="add_widget_button_label">Add widget</string>
+    <string name="add_widget_fallback_message">This launcher does not support direct widget pinning. Add the widget from your home screen widget picker.</string>
     <string name="app_version_label">App version</string>
-    <string name="reset_all_label">Reset all</string>
-    <string name="reset_all_supporting_text">Delete the full coffee history and reset today to 0.</string>
-    <string name="reset_all_button_label">Reset all data</string>
-    <string name="reset_all_confirmation_title">Reset all data?</string>
-    <string name="reset_all_confirmation_message">This deletes your full coffee history and resets today to 0. This cannot be undone.</string>
-    <string name="reset_all_confirm_label">Reset all</string>
-    <string name="reset_all_cancel_label">Cancel</string>
+    <string name="delete_all_history_label">Delete all history</string>
+    <string name="delete_all_history_button_label">Delete all history</string>
+    <string name="delete_all_history_confirmation_title">Delete all history?</string>
+    <string name="delete_all_history_confirmation_message">This deletes your full coffee history and resets today to 0. This cannot be undone.</string>
+    <string name="delete_all_history_confirm_label">Delete all history</string>
+    <string name="delete_all_history_cancel_label">Cancel</string>
 </resources>

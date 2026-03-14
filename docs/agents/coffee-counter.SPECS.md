@@ -301,7 +301,11 @@ The counts remain unchanged.
 - Export data (text, json or csv)
 - Alarm for late log: we are building an habit of log coffees. Set a daily alarm at 10AM(?) if th euser has logged nothing yet. Not time sensitive
 - i18: localize in TOP 5 languages first. At least EN, ES
+- Simplify code:
+  - extract home viemodel
+  - navigation bar: remove texts
 - Review best practices
+- Long press to open app: if supported
 
 Possible later improvements:
 

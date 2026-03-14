@@ -23,12 +23,14 @@ import org.junit.Test
 class SettingsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeCoffeeRepository
+    private lateinit var widgetPinRequester: FakeWidgetPinRequester
     private lateinit var widgetUpdater: FakeCoffeeWidgetUpdater
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeCoffeeRepository()
+        widgetPinRequester = FakeWidgetPinRequester()
         widgetUpdater = FakeCoffeeWidgetUpdater()
     }
 
@@ -42,12 +44,13 @@ class SettingsViewModelTest {
         val viewModel = SettingsViewModel(
             versionName = "1.0",
             coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
             widgetUpdater = widgetUpdater,
         )
 
-        viewModel.onResetAllClick()
+        viewModel.onDeleteHistoryClick()
 
-        assertEquals(true, viewModel.uiState.isResetConfirmationVisible)
+        assertEquals(true, viewModel.uiState.isDeleteHistoryConfirmationVisible)
     }
 
     @Test
@@ -55,13 +58,14 @@ class SettingsViewModelTest {
         val viewModel = SettingsViewModel(
             versionName = "1.0",
             coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
             widgetUpdater = widgetUpdater,
         )
 
-        viewModel.onResetAllClick()
-        viewModel.onDismissResetConfirmation()
+        viewModel.onDeleteHistoryClick()
+        viewModel.onDismissDeleteHistoryConfirmation()
 
-        assertEquals(false, viewModel.uiState.isResetConfirmationVisible)
+        assertEquals(false, viewModel.uiState.isDeleteHistoryConfirmationVisible)
     }
 
     @Test
@@ -76,18 +80,81 @@ class SettingsViewModelTest {
         val viewModel = SettingsViewModel(
             versionName = "1.0",
             coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
             widgetUpdater = widgetUpdater,
         )
-        viewModel.onResetAllClick()
+        viewModel.onDeleteHistoryClick()
 
-        viewModel.onConfirmResetAll()
+        viewModel.onConfirmDeleteHistory()
         advanceUntilIdle()
 
-        assertEquals(false, viewModel.uiState.isResetConfirmationVisible)
+        assertEquals(false, viewModel.uiState.isDeleteHistoryConfirmationVisible)
         assertEquals(1, repository.resetAllCalls)
         assertEquals(0, repository.todayCount.value)
         assertEquals(emptyList<DailyCount>(), repository.dailyCounts.value)
         assertEquals(1, widgetUpdater.refreshCalls)
+    }
+
+    @Test
+    fun init_hidesAddWidgetWhenWidgetAlreadyExists() {
+        widgetPinRequester.hasActiveWidget = true
+
+        val viewModel = SettingsViewModel(
+            versionName = "1.0",
+            coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
+            widgetUpdater = widgetUpdater,
+        )
+
+        assertEquals(false, viewModel.uiState.isAddWidgetVisible)
+    }
+
+    @Test
+    fun refreshAddWidgetVisibility_showsCardAgainAfterWidgetRemoval() {
+        widgetPinRequester.hasActiveWidget = true
+        val viewModel = SettingsViewModel(
+            versionName = "1.0",
+            coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
+            widgetUpdater = widgetUpdater,
+        )
+
+        widgetPinRequester.hasActiveWidget = false
+        viewModel.refreshAddWidgetVisibility()
+
+        assertEquals(true, viewModel.uiState.isAddWidgetVisible)
+    }
+
+    @Test
+    fun onAddWidgetClick_hidesFallbackWhenPinRequestStarts() {
+        widgetPinRequester.requestPinResult = true
+        val viewModel = SettingsViewModel(
+            versionName = "1.0",
+            coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
+            widgetUpdater = widgetUpdater,
+        )
+
+        viewModel.onAddWidgetClick()
+
+        assertEquals(1, widgetPinRequester.requestPinCalls)
+        assertEquals(false, viewModel.uiState.isWidgetPinFallbackVisible)
+    }
+
+    @Test
+    fun onAddWidgetClick_showsFallbackWhenPinRequestIsUnavailable() {
+        widgetPinRequester.requestPinResult = false
+        val viewModel = SettingsViewModel(
+            versionName = "1.0",
+            coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
+            widgetUpdater = widgetUpdater,
+        )
+
+        viewModel.onAddWidgetClick()
+
+        assertEquals(1, widgetPinRequester.requestPinCalls)
+        assertEquals(true, viewModel.uiState.isWidgetPinFallbackVisible)
     }
 }
 
@@ -135,5 +202,18 @@ private class FakeCoffeeWidgetUpdater : CoffeeWidgetUpdater {
 
     override suspend fun refresh() {
         refreshCalls += 1
+    }
+}
+
+private class FakeWidgetPinRequester : WidgetPinRequester {
+    var requestPinCalls: Int = 0
+    var requestPinResult: Boolean = true
+    var hasActiveWidget: Boolean = false
+
+    override fun hasActiveWidget(): Boolean = hasActiveWidget
+
+    override fun requestPin(): Boolean {
+        requestPinCalls += 1
+        return requestPinResult
     }
 }

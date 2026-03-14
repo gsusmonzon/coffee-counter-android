@@ -62,13 +62,13 @@ class AppFlowsInstrumentedTest {
         composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_RESET_BUTTON).performClick()
         composeRule.onNodeWithText(
-            composeRule.activity.getString(R.string.reset_all_confirmation_title)
+            composeRule.activity.getString(R.string.delete_all_history_confirmation_title)
         ).assertIsDisplayed()
 
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.reset_all_cancel_label))
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.delete_all_history_cancel_label))
             .performClick()
         composeRule.onAllNodesWithText(
-            composeRule.activity.getString(R.string.reset_all_confirmation_title)
+            composeRule.activity.getString(R.string.delete_all_history_confirmation_title)
         ).assertCountEquals(0)
 
         composeRule.onNodeWithTag(UiTestTags.NAV_HOME).performClick()
@@ -76,7 +76,7 @@ class AppFlowsInstrumentedTest {
 
         composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_RESET_BUTTON).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.reset_all_confirm_label))
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.delete_all_history_confirm_label))
             .performClick()
         composeRule.waitForIdle()
 

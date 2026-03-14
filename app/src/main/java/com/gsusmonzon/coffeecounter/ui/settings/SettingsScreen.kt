@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -23,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -40,29 +44,44 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val versionName: String,
-    val isResetConfirmationVisible: Boolean = false,
+    val isAddWidgetVisible: Boolean,
+    val isWidgetPinFallbackVisible: Boolean = false,
+    val isDeleteHistoryConfirmationVisible: Boolean = false,
 )
 
 class SettingsViewModel(
     versionName: String,
     private val coffeeRepository: CoffeeRepository,
+    private val widgetPinRequester: WidgetPinRequester,
     private val widgetUpdater: CoffeeWidgetUpdater,
 ) : ViewModel() {
     var uiState by mutableStateOf(
-        SettingsUiState(versionName = versionName)
+        SettingsUiState(
+            versionName = versionName,
+            isAddWidgetVisible = !widgetPinRequester.hasActiveWidget(),
+        )
     )
         private set
 
-    fun onResetAllClick() {
-        uiState = uiState.copy(isResetConfirmationVisible = true)
+    fun refreshAddWidgetVisibility() {
+        uiState = uiState.copy(isAddWidgetVisible = !widgetPinRequester.hasActiveWidget())
     }
 
-    fun onDismissResetConfirmation() {
-        uiState = uiState.copy(isResetConfirmationVisible = false)
+    fun onAddWidgetClick() {
+        val pinRequested = widgetPinRequester.requestPin()
+        uiState = uiState.copy(isWidgetPinFallbackVisible = !pinRequested)
     }
 
-    fun onConfirmResetAll() {
-        uiState = uiState.copy(isResetConfirmationVisible = false)
+    fun onDeleteHistoryClick() {
+        uiState = uiState.copy(isDeleteHistoryConfirmationVisible = true)
+    }
+
+    fun onDismissDeleteHistoryConfirmation() {
+        uiState = uiState.copy(isDeleteHistoryConfirmationVisible = false)
+    }
+
+    fun onConfirmDeleteHistory() {
+        uiState = uiState.copy(isDeleteHistoryConfirmationVisible = false)
 
         viewModelScope.launch {
             coffeeRepository.resetAll()
@@ -74,6 +93,7 @@ class SettingsViewModel(
         fun factory(
             versionName: String,
             coffeeRepository: CoffeeRepository,
+            widgetPinRequester: WidgetPinRequester,
             widgetUpdater: CoffeeWidgetUpdater,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -81,6 +101,7 @@ class SettingsViewModel(
                 return SettingsViewModel(
                     versionName = versionName,
                     coffeeRepository = coffeeRepository,
+                    widgetPinRequester = widgetPinRequester,
                     widgetUpdater = widgetUpdater,
                 ) as T
             }
@@ -93,7 +114,11 @@ fun SettingsRoute(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val appContainer = context.appContainer()
+    val widgetPinRequester = remember(context.applicationContext) {
+        AppWidgetPinRequester(context.applicationContext)
+    }
     val widgetUpdater = remember(context.applicationContext) {
         GlanceCoffeeWidgetUpdater(context.applicationContext)
     }
@@ -101,15 +126,32 @@ fun SettingsRoute(
         factory = SettingsViewModel.factory(
             versionName = BuildConfig.VERSION_NAME,
             coffeeRepository = appContainer.coffeeRepository,
+            widgetPinRequester = widgetPinRequester,
             widgetUpdater = widgetUpdater,
         )
     )
 
+    DisposableEffect(lifecycleOwner, viewModel) {
+        viewModel.refreshAddWidgetVisibility()
+
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshAddWidgetVisibility()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     SettingsScreen(
         uiState = viewModel.uiState,
-        onResetAllClick = viewModel::onResetAllClick,
-        onDismissResetConfirmation = viewModel::onDismissResetConfirmation,
-        onConfirmResetAll = viewModel::onConfirmResetAll,
+        onAddWidgetClick = viewModel::onAddWidgetClick,
+        onDeleteHistoryClick = viewModel::onDeleteHistoryClick,
+        onDismissDeleteHistoryConfirmation = viewModel::onDismissDeleteHistoryConfirmation,
+        onConfirmDeleteHistory = viewModel::onConfirmDeleteHistory,
         modifier = modifier,
     )
 }
@@ -117,9 +159,10 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
-    onResetAllClick: () -> Unit,
-    onDismissResetConfirmation: () -> Unit,
-    onConfirmResetAll: () -> Unit,
+    onAddWidgetClick: () -> Unit,
+    onDeleteHistoryClick: () -> Unit,
+    onDismissDeleteHistoryConfirmation: () -> Unit,
+    onConfirmDeleteHistory: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -127,12 +170,41 @@ fun SettingsScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.settings_about_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
+        if (uiState.isAddWidgetVisible) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.add_widget_label),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = stringResource(R.string.add_widget_supporting_text),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Button(
+                            onClick = onAddWidgetClick,
+                            modifier = Modifier
+                                .padding(top = 12.dp)
+                                .testTag(UiTestTags.SETTINGS_ADD_WIDGET_BUTTON),
+                        ) {
+                            Text(text = stringResource(R.string.add_widget_button_label))
+                        }
+                        if (uiState.isWidgetPinFallbackVisible) {
+                            Text(
+                                text = stringResource(R.string.add_widget_fallback_message),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         item {
@@ -164,39 +236,39 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = stringResource(R.string.reset_all_label),
+                        text = stringResource(R.string.delete_all_history_label),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    Text(
-                        text = stringResource(R.string.reset_all_supporting_text),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                     Button(
-                        onClick = onResetAllClick,
+                        onClick = onDeleteHistoryClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        ),
                         modifier = Modifier
                             .padding(top = 12.dp)
                             .testTag(UiTestTags.SETTINGS_RESET_BUTTON),
                     ) {
-                        Text(text = stringResource(R.string.reset_all_button_label))
+                        Text(text = stringResource(R.string.delete_all_history_button_label))
                     }
                 }
             }
         }
     }
 
-    if (uiState.isResetConfirmationVisible) {
+    if (uiState.isDeleteHistoryConfirmationVisible) {
         AlertDialog(
-            onDismissRequest = onDismissResetConfirmation,
-            title = { Text(text = stringResource(R.string.reset_all_confirmation_title)) },
-            text = { Text(text = stringResource(R.string.reset_all_confirmation_message)) },
+            onDismissRequest = onDismissDeleteHistoryConfirmation,
+            title = { Text(text = stringResource(R.string.delete_all_history_confirmation_title)) },
+            text = { Text(text = stringResource(R.string.delete_all_history_confirmation_message)) },
             confirmButton = {
-                TextButton(onClick = onConfirmResetAll) {
-                    Text(text = stringResource(R.string.reset_all_confirm_label))
+                TextButton(onClick = onConfirmDeleteHistory) {
+                    Text(text = stringResource(R.string.delete_all_history_confirm_label))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissResetConfirmation) {
-                    Text(text = stringResource(R.string.reset_all_cancel_label))
+                TextButton(onClick = onDismissDeleteHistoryConfirmation) {
+                    Text(text = stringResource(R.string.delete_all_history_cancel_label))
                 }
             },
         )
