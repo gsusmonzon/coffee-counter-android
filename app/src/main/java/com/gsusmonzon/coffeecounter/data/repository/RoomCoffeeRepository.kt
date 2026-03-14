@@ -29,6 +29,11 @@ class RoomCoffeeRepository(
             .distinctUntilChanged()
     }
 
+    override suspend fun getTodayCount(): Int {
+        val dateKey = localDateProvider.today().toStorageKey()
+        return dao.getCountForDate(dateKey)?.count ?: 0
+    }
+
     override fun observeDailyCounts(
         startDate: LocalDate,
         endDate: LocalDate,

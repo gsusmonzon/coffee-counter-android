@@ -2,6 +2,7 @@ package com.gsusmonzon.coffeecounter.ui.settings
 
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.reminder.ReminderNotificationStatusChecker
 import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,7 @@ class SettingsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeCoffeeRepository
     private lateinit var widgetPinRequester: FakeWidgetPinRequester
+    private lateinit var reminderNotificationStatusChecker: FakeReminderNotificationStatusChecker
     private lateinit var widgetUpdater: FakeCoffeeWidgetUpdater
 
     @Before
@@ -31,6 +33,7 @@ class SettingsViewModelTest {
         Dispatchers.setMain(dispatcher)
         repository = FakeCoffeeRepository()
         widgetPinRequester = FakeWidgetPinRequester()
+        reminderNotificationStatusChecker = FakeReminderNotificationStatusChecker()
         widgetUpdater = FakeCoffeeWidgetUpdater()
     }
 
@@ -41,12 +44,7 @@ class SettingsViewModelTest {
 
     @Test
     fun onResetAllClick_showsConfirmationDialog() {
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onDeleteHistoryClick()
 
@@ -55,12 +53,7 @@ class SettingsViewModelTest {
 
     @Test
     fun onDismissResetConfirmation_hidesConfirmationDialog() {
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onDeleteHistoryClick()
         viewModel.onDismissDeleteHistoryConfirmation()
@@ -77,12 +70,7 @@ class SettingsViewModelTest {
                 DailyCount(LocalDate.of(2026, 3, 14), 3),
             )
         )
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
         viewModel.onDeleteHistoryClick()
 
         viewModel.onConfirmDeleteHistory()
@@ -99,12 +87,7 @@ class SettingsViewModelTest {
     fun init_hidesAddWidgetWhenWidgetAlreadyExists() {
         widgetPinRequester.hasActiveWidget = true
 
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         assertEquals(false, viewModel.uiState.isAddWidgetVisible)
     }
@@ -112,12 +95,7 @@ class SettingsViewModelTest {
     @Test
     fun refreshAddWidgetVisibility_showsCardAgainAfterWidgetRemoval() {
         widgetPinRequester.hasActiveWidget = true
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         widgetPinRequester.hasActiveWidget = false
         viewModel.refreshAddWidgetVisibility()
@@ -128,12 +106,7 @@ class SettingsViewModelTest {
     @Test
     fun onAddWidgetClick_hidesFallbackWhenPinRequestStarts() {
         widgetPinRequester.requestPinResult = true
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onAddWidgetClick()
 
@@ -144,17 +117,42 @@ class SettingsViewModelTest {
     @Test
     fun onAddWidgetClick_showsFallbackWhenPinRequestIsUnavailable() {
         widgetPinRequester.requestPinResult = false
-        val viewModel = SettingsViewModel(
-            versionName = "1.0",
-            coffeeRepository = repository,
-            widgetPinRequester = widgetPinRequester,
-            widgetUpdater = widgetUpdater,
-        )
+        val viewModel = newViewModel()
 
         viewModel.onAddWidgetClick()
 
         assertEquals(1, widgetPinRequester.requestPinCalls)
         assertEquals(true, viewModel.uiState.isWidgetPinFallbackVisible)
+    }
+
+    @Test
+    fun init_showsReminderGuidanceWhenNotificationsAreUnavailable() {
+        reminderNotificationStatusChecker.canPostNotifications = false
+
+        val viewModel = newViewModel()
+
+        assertEquals(true, viewModel.uiState.isReminderGuidanceVisible)
+    }
+
+    @Test
+    fun refreshReminderGuidanceVisibility_hidesGuidanceAfterNotificationsReturn() {
+        reminderNotificationStatusChecker.canPostNotifications = false
+        val viewModel = newViewModel()
+
+        reminderNotificationStatusChecker.canPostNotifications = true
+        viewModel.refreshReminderGuidanceVisibility()
+
+        assertEquals(false, viewModel.uiState.isReminderGuidanceVisible)
+    }
+
+    private fun newViewModel(): SettingsViewModel {
+        return SettingsViewModel(
+            versionName = "1.0",
+            coffeeRepository = repository,
+            widgetPinRequester = widgetPinRequester,
+            reminderNotificationStatusChecker = reminderNotificationStatusChecker,
+            widgetUpdater = widgetUpdater,
+        )
     }
 }
 
@@ -164,6 +162,8 @@ private class FakeCoffeeRepository : CoffeeRepository {
     var resetAllCalls: Int = 0
 
     override fun observeTodayCount(): Flow<Int> = todayCount
+
+    override suspend fun getTodayCount(): Int = todayCount.value
 
     override fun observeDailyCounts(
         startDate: LocalDate,
@@ -216,4 +216,10 @@ private class FakeWidgetPinRequester : WidgetPinRequester {
         requestPinCalls += 1
         return requestPinResult
     }
+}
+
+private class FakeReminderNotificationStatusChecker : ReminderNotificationStatusChecker {
+    var canPostNotifications: Boolean = true
+
+    override fun canPostReminderNotifications(): Boolean = canPostNotifications
 }

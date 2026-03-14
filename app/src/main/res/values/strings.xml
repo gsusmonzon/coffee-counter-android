@@ -19,6 +19,9 @@
     <string name="add_widget_supporting_text">Pin the widget to keep coffee logging one tap away from your home screen.</string>
     <string name="add_widget_button_label">Add widget</string>
     <string name="add_widget_fallback_message">This launcher does not support direct widget pinning. Add the widget from your home screen widget picker.</string>
+    <string name="reminder_guidance_label">Daily reminder</string>
+    <string name="reminder_guidance_supporting_text">The 10:00 AM reminder needs notifications enabled for Coffee Counter. Turn them back on in system settings.</string>
+    <string name="reminder_guidance_button_label">Open notification settings</string>
     <string name="app_version_label">App version</string>
     <string name="app_version_supporting_text">The build currently installed on this device.</string>
     <string name="app_version_value_label">Version</string>
@@ -29,4 +32,8 @@
     <string name="delete_all_history_confirmation_message">This deletes your full coffee history and resets today to 0. This cannot be undone.</string>
     <string name="delete_all_history_confirm_label">Delete all history</string>
     <string name="delete_all_history_cancel_label">Cancel</string>
+    <string name="late_log_reminder_channel_name">Coffee reminders</string>
+    <string name="late_log_reminder_channel_description">Daily reminder to log coffee when today is still empty.</string>
+    <string name="late_log_reminder_title">No coffee logged yet?</string>
+    <string name="late_log_reminder_message">Open Coffee Counter to log your first coffee for today.</string>
 </resources>

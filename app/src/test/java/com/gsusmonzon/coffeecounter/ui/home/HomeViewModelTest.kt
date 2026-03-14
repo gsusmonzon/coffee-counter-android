@@ -154,6 +154,8 @@ private class FakeCoffeeRepository(
         counts[today] ?: 0
     }
 
+    override suspend fun getTodayCount(): Int = dailyCounts.value[localDateProvider.today()] ?: 0
+
     override fun observeDailyCounts(
         startDate: LocalDate,
         endDate: LocalDate,

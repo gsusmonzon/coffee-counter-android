@@ -7,10 +7,16 @@ import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
 import com.gsusmonzon.coffeecounter.data.repository.RoomCoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
+import com.gsusmonzon.coffeecounter.reminder.AlarmManagerLateLogReminderScheduler
 
 class CoffeeCounterApplication : Application() {
     val appContainer: AppContainer by lazy {
         DefaultAppContainer(this)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        AlarmManagerLateLogReminderScheduler(this).scheduleNextReminder()
     }
 }
 

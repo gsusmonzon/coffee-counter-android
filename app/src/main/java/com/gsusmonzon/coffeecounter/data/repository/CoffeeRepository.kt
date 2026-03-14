@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 interface CoffeeRepository {
     fun observeTodayCount(): Flow<Int>
 
+    suspend fun getTodayCount(): Int
+
     /**
      * Returns stored rows in the inclusive range from [startDate] to [endDate].
      * Missing dates are handled by higher-level history logic.

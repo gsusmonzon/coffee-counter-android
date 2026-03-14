@@ -1,6 +1,9 @@
 package com.gsusmonzon.coffeecounter.ui.settings
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -41,6 +44,8 @@ import com.gsusmonzon.coffeecounter.BuildConfig
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
+import com.gsusmonzon.coffeecounter.reminder.ReminderNotificationStatusChecker
+import com.gsusmonzon.coffeecounter.reminder.SystemReminderNotificationStatusChecker
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
 import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import com.gsusmonzon.coffeecounter.widget.GlanceCoffeeWidgetUpdater
@@ -50,6 +55,7 @@ data class SettingsUiState(
     val versionName: String,
     val isAddWidgetVisible: Boolean,
     val isWidgetPinFallbackVisible: Boolean = false,
+    val isReminderGuidanceVisible: Boolean = false,
     val isDeleteHistoryConfirmationVisible: Boolean = false,
 )
 
@@ -57,18 +63,26 @@ class SettingsViewModel(
     versionName: String,
     private val coffeeRepository: CoffeeRepository,
     private val widgetPinRequester: WidgetPinRequester,
+    private val reminderNotificationStatusChecker: ReminderNotificationStatusChecker,
     private val widgetUpdater: CoffeeWidgetUpdater,
 ) : ViewModel() {
     var uiState by mutableStateOf(
         SettingsUiState(
             versionName = versionName,
             isAddWidgetVisible = !widgetPinRequester.hasActiveWidget(),
+            isReminderGuidanceVisible = !reminderNotificationStatusChecker.canPostReminderNotifications(),
         ),
     )
         private set
 
     fun refreshAddWidgetVisibility() {
         uiState = uiState.copy(isAddWidgetVisible = !widgetPinRequester.hasActiveWidget())
+    }
+
+    fun refreshReminderGuidanceVisibility() {
+        uiState = uiState.copy(
+            isReminderGuidanceVisible = !reminderNotificationStatusChecker.canPostReminderNotifications(),
+        )
     }
 
     fun onAddWidgetClick() {
@@ -98,6 +112,7 @@ class SettingsViewModel(
             versionName: String,
             coffeeRepository: CoffeeRepository,
             widgetPinRequester: WidgetPinRequester,
+            reminderNotificationStatusChecker: ReminderNotificationStatusChecker,
             widgetUpdater: CoffeeWidgetUpdater,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -106,6 +121,7 @@ class SettingsViewModel(
                     versionName = versionName,
                     coffeeRepository = coffeeRepository,
                     widgetPinRequester = widgetPinRequester,
+                    reminderNotificationStatusChecker = reminderNotificationStatusChecker,
                     widgetUpdater = widgetUpdater,
                 ) as T
             }
@@ -123,6 +139,9 @@ fun SettingsRoute(
     val widgetPinRequester = remember(context.applicationContext) {
         AppWidgetPinRequester(context.applicationContext)
     }
+    val reminderNotificationStatusChecker = remember(context.applicationContext) {
+        SystemReminderNotificationStatusChecker(context.applicationContext)
+    }
     val widgetUpdater = remember(context.applicationContext) {
         GlanceCoffeeWidgetUpdater(context.applicationContext)
     }
@@ -131,16 +150,19 @@ fun SettingsRoute(
             versionName = BuildConfig.VERSION_NAME,
             coffeeRepository = appContainer.coffeeRepository,
             widgetPinRequester = widgetPinRequester,
+            reminderNotificationStatusChecker = reminderNotificationStatusChecker,
             widgetUpdater = widgetUpdater,
         ),
     )
 
     DisposableEffect(lifecycleOwner, viewModel) {
         viewModel.refreshAddWidgetVisibility()
+        viewModel.refreshReminderGuidanceVisibility()
 
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refreshAddWidgetVisibility()
+                viewModel.refreshReminderGuidanceVisibility()
             }
         }
 
@@ -153,6 +175,7 @@ fun SettingsRoute(
     SettingsScreen(
         uiState = viewModel.uiState,
         onAddWidgetClick = viewModel::onAddWidgetClick,
+        onOpenNotificationSettingsClick = { context.openAppNotificationSettings() },
         onDeleteHistoryClick = viewModel::onDeleteHistoryClick,
         onDismissDeleteHistoryConfirmation = viewModel::onDismissDeleteHistoryConfirmation,
         onConfirmDeleteHistory = viewModel::onConfirmDeleteHistory,
@@ -164,6 +187,7 @@ fun SettingsRoute(
 fun SettingsScreen(
     uiState: SettingsUiState,
     onAddWidgetClick: () -> Unit,
+    onOpenNotificationSettingsClick: () -> Unit,
     onDeleteHistoryClick: () -> Unit,
     onDismissDeleteHistoryConfirmation: () -> Unit,
     onConfirmDeleteHistory: () -> Unit,
@@ -209,6 +233,26 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (uiState.isReminderGuidanceVisible) {
+            item {
+                SettingsCard(
+                    title = stringResource(R.string.reminder_guidance_label),
+                    supporting = stringResource(R.string.reminder_guidance_supporting_text),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Button(onClick = onOpenNotificationSettingsClick) {
+                            Text(text = stringResource(R.string.reminder_guidance_button_label))
                         }
                     }
                 }
@@ -325,3 +369,22 @@ private fun SettingsCard(
 }
 
 private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
+
+private fun Context.openAppNotificationSettings() {
+    val notificationSettingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", packageName, null)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    startActivity(
+        if (notificationSettingsIntent.resolveActivity(packageManager) != null) {
+            notificationSettingsIntent
+        } else {
+            appDetailsIntent
+        },
+    )
+}
