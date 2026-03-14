@@ -41,8 +41,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsusmonzon.coffeecounter.BuildConfig
-import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
+import com.gsusmonzon.coffeecounter.appContainer
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.reminder.ReminderNotificationStatusChecker
 import com.gsusmonzon.coffeecounter.reminder.SystemReminderNotificationStatusChecker
@@ -373,8 +373,6 @@ private fun SettingsCard(
         }
     }
 }
-
-private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
 
 private fun Context.openAppNotificationSettings() {
     val notificationSettingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {

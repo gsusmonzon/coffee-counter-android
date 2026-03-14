@@ -60,6 +60,7 @@ class HomeViewModelTest {
 
         assertEquals(1, repository.todayCount())
         assertEquals(1, viewModel.uiState.value.todayCount)
+        assertEquals(1, widgetUpdater.refreshCalls)
     }
 
     @Test
@@ -73,6 +74,7 @@ class HomeViewModelTest {
 
         assertEquals(1, repository.todayCount())
         assertEquals(1, viewModel.uiState.value.todayCount)
+        assertEquals(1, widgetUpdater.refreshCalls)
 
         viewModel.onRemoveCoffeeClick()
         viewModel.onRemoveCoffeeClick()
@@ -80,6 +82,7 @@ class HomeViewModelTest {
 
         assertEquals(0, repository.todayCount())
         assertEquals(0, viewModel.uiState.value.todayCount)
+        assertEquals(3, widgetUpdater.refreshCalls)
     }
 
     @Test
@@ -160,6 +163,30 @@ class HomeViewModelTest {
 
         assertEquals(62, viewModel.uiState.value.historyChart.bars.size)
         assertEquals(LocalDate.of(2026, 1, 12), viewModel.uiState.value.historyChart.bars.first().date)
+    }
+
+    @Test
+    fun loadingOlderChartHistory_doesNotChangeLast30DaySummaryWindow() = runTest(dispatcher) {
+        repository.seedHistory(
+            listOf(
+                DailyCount(date = LocalDate.of(2026, 3, 14), count = 4),
+                DailyCount(date = LocalDate.of(2026, 3, 10), count = 2),
+                DailyCount(date = LocalDate.of(2026, 2, 1), count = 9),
+            )
+        )
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        assertEquals(6, viewModel.uiState.value.historySections.last().totalCount)
+
+        viewModel.onHistoryChartOpen()
+        advanceUntilIdle()
+        viewModel.onLoadOlderHistory()
+        advanceUntilIdle()
+
+        assertEquals(6, viewModel.uiState.value.historySections.first().totalCount)
+        assertEquals(6, viewModel.uiState.value.historySections.last().totalCount)
+        assertEquals(62, viewModel.uiState.value.historyChart.bars.size)
     }
 
     @Test

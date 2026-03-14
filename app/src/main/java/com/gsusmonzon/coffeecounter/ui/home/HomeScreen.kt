@@ -31,8 +31,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
+import com.gsusmonzon.coffeecounter.appContainer
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
@@ -167,12 +167,14 @@ class HomeViewModel(
     fun onAddCoffeeClick() {
         viewModelScope.launch {
             coffeeRepository.incrementToday()
+            widgetUpdater.refresh()
         }
     }
 
     fun onRemoveCoffeeClick() {
         viewModelScope.launch {
             coffeeRepository.decrementToday()
+            widgetUpdater.refresh()
         }
     }
 
@@ -497,8 +499,6 @@ private fun SectionTitle(
     )
 }
 
-private fun Context.appContainer() = (applicationContext as CoffeeCounterApplication).appContainer
-
 private fun Double.toDisplayLabel(): String {
     val formatter = DecimalFormat("0.#")
     return formatter.format(this)
@@ -513,12 +513,24 @@ private fun buildHomeUiState(
     isHistoryChartVisible: Boolean,
     editSession: HistoryEditSession?,
 ): HomeUiState {
+    val last30Start = today.minusDays(HISTORY_DAYS_30.toLong() - 1)
+    val last7Start = today.minusDays(HISTORY_DAYS_7.toLong() - 1)
+    val last30StoredCounts = storedCounts.filter { dailyCount ->
+        dailyCount.date >= last30Start
+    }
+    val last7StoredCounts = last30StoredCounts.filter { dailyCount ->
+        dailyCount.date >= last7Start
+    }
     val last30Days = buildHistoryTimeline(
         endDate = today,
         days = HISTORY_DAYS_30,
-        storedCounts = storedCounts.takeLast(HISTORY_DAYS_30),
+        storedCounts = last30StoredCounts,
     )
-    val last7Days = last30Days.take(HISTORY_DAYS_7)
+    val last7Days = buildHistoryTimeline(
+        endDate = today,
+        days = HISTORY_DAYS_7,
+        storedCounts = last7StoredCounts,
+    )
     val last7DaySummary = buildHistorySummary(last7Days)
     val last30DaySummary = buildHistorySummary(last30Days)
     val chartTimeline = buildHistoryTimeline(

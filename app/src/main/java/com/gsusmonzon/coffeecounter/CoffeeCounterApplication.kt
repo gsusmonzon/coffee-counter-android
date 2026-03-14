@@ -1,6 +1,7 @@
 package com.gsusmonzon.coffeecounter
 
 import android.app.Application
+import android.content.Context
 import androidx.room.Room
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
@@ -23,6 +24,10 @@ class CoffeeCounterApplication : Application() {
 interface AppContainer {
     val coffeeRepository: CoffeeRepository
     val localDateProvider: LocalDateProvider
+}
+
+internal fun Context.appContainer(): AppContainer {
+    return (applicationContext as CoffeeCounterApplication).appContainer
 }
 
 private class DefaultAppContainer(

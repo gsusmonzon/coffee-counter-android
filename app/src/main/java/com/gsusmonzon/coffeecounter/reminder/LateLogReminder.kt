@@ -194,10 +194,6 @@ internal class SystemLateLogReminderNotifier(
     }
 
     private fun ensureNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return
-        }
-
         val notificationManager = applicationContext.getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             LATE_LOG_REMINDER_CHANNEL_ID,

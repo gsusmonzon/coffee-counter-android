@@ -83,13 +83,13 @@ class RoomCoffeeRepository(
 
     private suspend fun updateTodayCount(transform: (Int) -> Int) {
         val dateKey = localDateProvider.today().toStorageKey()
-        val currentCount = dao.getCountForDate(dateKey)?.count ?: 0
-        val updatedCount = transform(currentCount)
-
-        setCount(
-            dateKey = dateKey,
-            updatedCount = updatedCount,
-        )
+        database.withTransaction {
+            val currentCount = dao.getCountForDate(dateKey)?.count ?: 0
+            setCountInTransaction(
+                dateKey = dateKey,
+                updatedCount = transform(currentCount),
+            )
+        }
     }
 
     private suspend fun setCount(
@@ -97,24 +97,34 @@ class RoomCoffeeRepository(
         updatedCount: Int,
     ) {
         database.withTransaction {
-            val current = dao.getCountForDate(dateKey)
-
-            if (updatedCount == 0 && current == null) {
-                return@withTransaction
-            }
-
-            if (updatedCount == 0) {
-                dao.deleteByDate(dateKey)
-                return@withTransaction
-            }
-
-            dao.upsert(
-                DailyCountEntity(
-                    date = dateKey,
-                    count = updatedCount,
-                )
+            setCountInTransaction(
+                dateKey = dateKey,
+                updatedCount = updatedCount,
             )
         }
+    }
+
+    private suspend fun setCountInTransaction(
+        dateKey: String,
+        updatedCount: Int,
+    ) {
+        val current = dao.getCountForDate(dateKey)
+
+        if (updatedCount == 0 && current == null) {
+            return
+        }
+
+        if (updatedCount == 0) {
+            dao.deleteByDate(dateKey)
+            return
+        }
+
+        dao.upsert(
+            DailyCountEntity(
+                date = dateKey,
+                count = updatedCount,
+            )
+        )
     }
 }
 

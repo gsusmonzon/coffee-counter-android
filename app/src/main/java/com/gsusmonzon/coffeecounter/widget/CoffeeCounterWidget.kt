@@ -43,6 +43,7 @@ import androidx.glance.unit.ColorProvider
 import com.gsusmonzon.coffeecounter.MainActivity
 import com.gsusmonzon.coffeecounter.CoffeeCounterApplication
 import com.gsusmonzon.coffeecounter.R
+import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import kotlinx.coroutines.runBlocking
 
 class CoffeeCounterWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -87,16 +88,23 @@ class CoffeeCounterWidget : GlanceAppWidget() {
         val repository = (context.applicationContext as CoffeeCounterApplication)
             .appContainer
             .coffeeRepository
+        val todayLabel = context.getString(R.string.today_title)
 
         provideContent {
             val todayCount by repository.observeTodayCount().collectAsState(initial = 0)
-            CoffeeCounterWidgetContent(todayCount = todayCount)
+            CoffeeCounterWidgetContent(
+                todayLabel = todayLabel,
+                todayCount = todayCount,
+            )
         }
     }
 }
 
 @androidx.compose.runtime.Composable
-private fun CoffeeCounterWidgetContent(todayCount: Int) {
+private fun CoffeeCounterWidgetContent(
+    todayLabel: String,
+    todayCount: Int,
+) {
     Row(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -119,7 +127,7 @@ private fun CoffeeCounterWidgetContent(todayCount: Int) {
                 verticalAlignment = Alignment.Vertical.CenterVertically,
             ) {
                 Text(
-                    text = "Today",
+                    text = todayLabel,
                     style = TextStyle(
                         color = WidgetColors.label,
                         fontSize = 12.sp,
@@ -215,18 +223,18 @@ class OpenAppAction : ActionCallback {
 }
 
 internal class CoffeeWidgetActionHandler(
-    private val repositoryActions: CoffeeWidgetRepositoryActions,
+    private val repository: CoffeeRepository,
     private val widgetUpdater: CoffeeWidgetUpdater,
     private val feedbackPerformer: CoffeeWidgetFeedbackPerformer,
 ) {
     suspend fun addCoffee() {
-        repositoryActions.incrementToday()
+        repository.incrementToday()
         widgetUpdater.refresh()
         feedbackPerformer.performActionFeedback()
     }
 
     suspend fun undoCoffee() {
-        repositoryActions.decrementToday()
+        repository.decrementToday()
         widgetUpdater.refresh()
         feedbackPerformer.performActionFeedback()
     }
@@ -237,28 +245,11 @@ internal class CoffeeWidgetActionHandler(
             val repository = application.appContainer.coffeeRepository
 
             return CoffeeWidgetActionHandler(
-                repositoryActions = CoffeeRepositoryWidgetActions(repository),
+                repository = repository,
                 widgetUpdater = GlanceCoffeeWidgetUpdater(context.applicationContext),
                 feedbackPerformer = VibrationWidgetFeedbackPerformer(context.applicationContext),
             )
         }
-    }
-}
-
-internal interface CoffeeWidgetRepositoryActions {
-    suspend fun incrementToday()
-    suspend fun decrementToday()
-}
-
-internal class CoffeeRepositoryWidgetActions(
-    private val repository: com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository,
-) : CoffeeWidgetRepositoryActions {
-    override suspend fun incrementToday() {
-        repository.incrementToday()
-    }
-
-    override suspend fun decrementToday() {
-        repository.decrementToday()
     }
 }
 
@@ -296,10 +287,6 @@ private object WidgetColors {
     val primary: ColorProvider = DayNightColorProvider(
         day = Color(0xFF5C3B22),
         night = Color(0xFFE6C7A8),
-    )
-    val onPrimary: ColorProvider = DayNightColorProvider(
-        day = Color(0xFFFFF8F3),
-        night = Color(0xFF2A211B),
     )
     val actionSurface: ColorProvider = DayNightColorProvider(
         day = Color(0x1F5C3B22),
