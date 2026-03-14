@@ -101,9 +101,10 @@ Status values for implementation:
 | 2 | Room-backed coffee logging and repository tests | Accepted | 2026-03-14 |
 | 3 | Home screen with today counter and manual add | Accepted | 2026-03-14 |
 | 4 | History with 7-day and 30-day zero-filled stats | Accepted | 2026-03-14 |
-| 5 | Widget add/undo flow with refresh and vibration | Pending | - |
+| 5 | Widget add/undo flow with refresh and vibration | Accepted | 2026-03-14 |
 | 6 | Settings screen with app version and reset-all | Pending | - |
 | 7 | Final regression coverage and device validation | Pending | - |
+| 8 | Widget setup refinement with in-app add-widget flow | Pending | - |
 
 ## Skill Recommendation
 
@@ -339,6 +340,37 @@ Tests:
 Acceptance:
 - accept when the MVP is stable enough for regular use without obvious regressions
 
+## Phase 8
+
+Goal:
+- make widget setup easier from inside the app
+
+Scope:
+- research and implement an in-app add-widget entry point
+- prefer direct widget pinning over trying to open the generic widgets picker
+- add a simple UI entry point from the app, likely from `Home` or `Settings`
+- handle unsupported launchers gracefully
+- add lightweight guidance text if direct pinning is unavailable
+
+Implementation notes:
+- Android does not provide a standard public API to open the launcher's generic widgets screen
+- the supported direction is requesting that the launcher pin this app's widget directly
+- if using Glance APIs is reliable in this project version, prefer the Glance pinning path
+- otherwise use the platform `AppWidgetManager.requestPinAppWidget(...)` flow
+
+Verification:
+- on supported launchers, tapping the in-app CTA opens the system pin-widget confirmation flow
+- confirming the flow adds the widget successfully
+- on unsupported launchers, the app shows a clear fallback message instead of failing silently
+
+Tests:
+- keep this light
+- unit test availability/fallback logic if extracted
+- rely mainly on device/emulator verification because launcher support is environment-specific
+
+Acceptance:
+- accept when a user can start widget setup from inside the app with a clear success or fallback path
+
 ## Phase Order Rationale
 
 - Phase 1 creates a stable skeleton without premature abstraction.
@@ -348,6 +380,7 @@ Acceptance:
 - Phase 5 adds the main differentiator: one-tap widget logging.
 - Phase 6 finishes the minimal secondary screen.
 - Phase 7 adds only the final confidence work that is actually needed.
+- Phase 8 improves onboarding into the widget-first experience without expanding the MVP core.
 
 ## Working Agreement For Implementation
 

@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Coffee Counter</string>
+    <string name="coffee_counter_widget_name">Coffee Counter</string>
+    <string name="coffee_counter_widget_description">Log coffee with one tap from your home screen.</string>
     <string name="home_label">Home</string>
     <string name="settings_label">Settings</string>
     <string name="today_title">Today</string>
