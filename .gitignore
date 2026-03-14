@@ -1,0 +1,45 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+# Files for the ART/Dalvik VM
+*.dex
+# Java class files
+*.class
+# Generated files
+gen/
+out/
+# App Release Files
+app/release/*
+
+*.iml
+.gradle
+.DS_Store
+build
+captures
+.externalNativeBuild
+.cxx
+local.properties
+*.log
+
+# Android Studio generated files and folders
+captures/
+.externalNativeBuild/
+.cxx/
+*.aab
+*.apk
+output-metadata.json
+
+# IntelliJ
+*.iml
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
+
+# Keystore files
+*.jks
+*.keystore# Android Profiling
+*.hprof
+.kotlin/sessions
