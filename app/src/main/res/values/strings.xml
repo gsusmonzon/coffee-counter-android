@@ -17,6 +17,12 @@
     <string name="history_empty_message">Your first tap will start filling in these daily totals.</string>
     <string name="history_chart_title">Daily history</string>
     <string name="history_chart_supporting_text">Scroll left for older days.</string>
+    <string name="history_edit_title">Edit %1$s</string>
+    <string name="history_edit_supporting_text">Set the exact coffee count for this day. Saving 0 clears the stored row.</string>
+    <string name="history_edit_count_label">Coffee count</string>
+    <string name="history_edit_invalid_message">Enter a non-negative whole number.</string>
+    <string name="history_edit_save_label">Save</string>
+    <string name="history_edit_cancel_label">Cancel</string>
     <string name="add_widget_label">Home screen widget</string>
     <string name="add_widget_supporting_text">Pin the widget to keep coffee logging one tap away from your home screen.</string>
     <string name="add_widget_button_label">Add widget</string>
