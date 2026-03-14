@@ -22,7 +22,8 @@ Each phase follows the same loop:
 - Persistence: `Room`
 - App structure: two screens
 - `Home`: today counter with manual add plus history
-- `Settings`: app version plus reset-all with confirmation
+- `Settings`: add-widget entry point, app version, and delete-all-history with confirmation
+- history averages are intentionally based on active coffee days, not full calendar ranges
 - prefer fast tests over slow tests
 - prefer integration tests over narrow component tests
 - use unit tests for business logic where they add value
@@ -43,7 +44,7 @@ Use a minimal Modern Android App Architecture balance:
 - add focused domain classes only for real business rules, for example:
 - generating synthetic zero-filled history ranges
 - day/date calculations
-- reset-all orchestration if it stops being trivial
+- delete-all-history orchestration if it stops being trivial
 
 - Data layer:
 - Room entities, DAO, database
@@ -82,7 +83,7 @@ Default test pyramid for this project:
 
 - Instrumentation only for final, high-value checks:
 - widget added to launcher and usable end-to-end
-- reset-all confirmation flow if JVM coverage is insufficient
+- delete-all-history confirmation flow if JVM coverage is insufficient
 
 Testing rule for each phase:
 - add only the smallest set of tests that protects the new behavior from regression
@@ -102,9 +103,15 @@ Status values for implementation:
 | 3 | Home screen with today counter and manual add | Accepted | 2026-03-14 |
 | 4 | History with 7-day and 30-day zero-filled stats | Accepted | 2026-03-14 |
 | 5 | Widget add/undo flow with refresh and vibration | Accepted | 2026-03-14 |
-| 6 | Settings screen with app version and reset-all | Accepted | 2026-03-14 |
+| 6 | Settings screen with app version and delete-all-history | Accepted | 2026-03-14 |
 | 7 | Final regression coverage and device validation | Accepted | 2026-03-14 |
-| 8 | Widget setup refinement with in-app add-widget flow | In progress | - |
+| 8 | Widget setup refinement with in-app add-widget flow | Accepted | 2026-03-14 |
+| 9 | Automatic local-day rollover for app and widget | Pending | - |
+| 10 | UI review and polish pass | Pending | - |
+| 11 | Late-log reminder notification | Pending | - |
+| 12 | Code quality review and simplification pass | Pending | - |
+| 13 | Charted history exploration screen | Pending | - |
+| 14 | Edit past days from chart | Pending | - |
 
 ## Skill Recommendation
 
@@ -174,7 +181,7 @@ Scope:
 - decrement today with floor at `0`
 - get today count
 - get date range counts
-- reset all data
+- delete all data
 
 Implementation notes:
 - store counts by local calendar date
@@ -291,25 +298,25 @@ Goal:
 Scope:
 - build `Settings` screen
 - show app version
-- add reset-all action
-- add confirmation dialog before reset
+- add delete-all-history action
+- add confirmation dialog before delete
 
 Implementation notes:
-- reset-all must update app UI and widget state consistently
+- delete-all-history must update app UI and widget state consistently
 - keep settings intentionally sparse
 
 Verification:
 - app version is visible
-- reset requires confirmation
-- confirming reset clears data and returns today/history to `0`
+- delete-all-history requires confirmation
+- confirming delete-all-history clears data and returns today/history to `0`
 - widget reflects reset state
 
 Tests:
-- `ViewModel` or repository tests for reset behavior
+- `ViewModel` or repository tests for delete-all-history behavior
 - UI tests only if dialog behavior is awkward to cover otherwise
 
 Acceptance:
-- accept when reset-all is safe, explicit, and consistent across surfaces
+- accept when delete-all-history is safe, explicit, and consistent across surfaces
 
 ## Phase 7
 
@@ -332,7 +339,7 @@ Verification:
 - app add flow
 - history rendering
 - widget add/undo
-- reset-all
+- delete-all-history
 
 Tests:
 - selective instrumentation tests only for flows that cannot be covered sufficiently with JVM tests
@@ -371,6 +378,197 @@ Tests:
 Acceptance:
 - accept when a user can start widget setup from inside the app with a clear success or fallback path
 
+## Phase 9
+
+Goal:
+- make day rollover behave correctly without requiring the user to reopen the app or recreate the widget
+
+Scope:
+- update app state observation so `Home` rolls over automatically at local midnight
+- update widget state observation so the widget shows the new day count at local midnight
+- ensure history windows also shift forward to the new local day
+- preserve prior days exactly as stored
+
+Implementation notes:
+- this is about passive rollover, not only correct writes after midnight
+- treat local calendar day boundaries as the source of truth
+- prefer a small, explicit time/day source rather than scattering midnight logic through UI code
+
+Verification:
+- when local time crosses from `23:59` to `00:00`, app today count becomes `0` if no row exists for the new day
+- the widget also shows `0` for the new day without needing manual refresh from the user
+- history ranges shift forward by one day and still show prior stored days correctly
+- taps after midnight write to the new day only
+
+Tests:
+- add focused tests for observer rollover behavior across a mocked local day change
+- add only the minimum additional integration coverage needed to prove app and widget behavior
+
+Acceptance:
+- accept when midnight rollover behaves correctly in both app and widget under local time semantics
+
+## Phase 10
+
+Goal:
+- review and polish the user interface without expanding product scope
+
+Scope:
+- review wording, spacing, alignment, typography hierarchy, and card/button consistency
+- improve empty or first-use presentation if needed
+- review widget readability and balance in the supported size
+- keep all existing behavior unchanged unless a polish fix is clearly required
+
+Implementation notes:
+- prefer small, high-signal UI changes over redesign
+- preserve the intentional minimal feel of the product
+- do not add optional settings or decorative complexity
+
+Verification:
+- main screens look intentional and consistent on phone sizes used for validation
+- widget remains readable and tap targets remain clear
+- first-use and low-data states feel deliberate rather than placeholder-like
+
+Tests:
+- rely mainly on manual review unless a polish change introduces behavior worth protecting
+
+Acceptance:
+- accept when the UI feels cohesive, minimal, and production-ready for V1
+
+## Phase 11
+
+Goal:
+- add a lightweight daily reminder that nudges the user to log coffee only when they have not logged anything yet that day
+
+Scope:
+- schedule one approximate local-time reminder for every day at `10:00 AM`
+- keep the feature always enabled with no user-facing toggle in V1
+- when the reminder fires, show a notification only if today’s count is still `0`
+- send at most one reminder per day with no snooze or repeated nudges
+- tapping the notification opens the app
+- if notifications are blocked or permission is denied, show guidance in `Settings`
+- place that guidance after the widget card
+
+Implementation notes:
+- this reminder is habit support, not a precise alarm; prefer approximate scheduling
+- treat local calendar day semantics as the source of truth
+- avoid adding notification customization or scheduling settings in V1
+- Android 13+ notification permission handling should degrade gracefully
+
+Verification:
+- on a day with no logged coffee, one reminder can appear around `10:00 AM` local time
+- if at least one coffee is already logged before the reminder check runs, no notification appears
+- the reminder does not repeat later the same day
+- tapping the notification opens the app
+- if notifications are blocked or denied, `Settings` shows guidance in the intended position
+
+Tests:
+- add focused tests for the “logged nothing yet today” decision rule
+- add only the minimum Android coverage needed for notification scheduling and blocked-permission guidance
+
+Acceptance:
+- accept when the reminder is low-friction, once per day, and silent on days where the user already logged coffee
+
+## Phase 12
+
+Goal:
+- review the implementation for unnecessary complexity and simplify where it improves maintainability
+
+Scope:
+- review architecture seams, naming, duplication, and state ownership
+- remove or simplify code that no longer earns its abstraction cost
+- tighten comments and documentation where the current implementation decisions should be preserved
+- keep external behavior stable
+
+Implementation notes:
+- favor deletion and simplification over new abstractions
+- preserve tested behavior and avoid churn for cosmetic refactors
+- if a pattern is already clear and cheap, leave it alone
+
+Verification:
+- project still builds and the relevant test suites still pass
+- no user-visible regressions are introduced
+- code paths for app, widget, and settings remain easy to trace
+
+Tests:
+- rerun existing regression suites
+- add tests only if a simplification changes behavior boundaries
+
+Acceptance:
+- accept when the codebase is simpler and easier to maintain without reducing product confidence
+
+## Phase 13
+
+Goal:
+- make history easier to inspect by adding a charted view of daily coffee counts
+
+Scope:
+- open a charted history surface when either history card on `Home` is tapped
+- consider both a full-screen screen and a bottom sheet, and choose the simpler option that keeps the chart usable
+- both `Home` history cards open the same chart experience
+- start with a bar chart that fits roughly `8` days across the available width
+- chart axes represent:
+- `x`: local calendar day
+- `y`: coffee count for that day
+- prefer using a chart library first rather than building a custom chart immediately
+- load only the most recent N days in memory by default
+- support horizontal scrolling backward into older days and forward again toward today
+- load older days incrementally as the user scrolls rather than loading all history upfront
+
+Implementation notes:
+- the chart should still represent zero-count days explicitly, even when no stored row exists
+- keep the first version readable and practical rather than visually ambitious
+- if the chart library adds disproportionate complexity, reassess early and document the fallback direction
+- preserve local-day semantics and existing history rules
+
+Verification:
+- tapping either history card opens the charted history surface
+- the initial viewport shows recent days with approximately `8` day columns visible
+- users can scroll backward to older days and forward again toward today
+- additional past days load as needed while scrolling
+- displayed bar heights match stored counts and synthetic zero days consistently
+
+Tests:
+- add focused tests for paged/incremental history loading if that logic is extracted
+- add only the minimum UI coverage needed for opening the chart surface and basic range loading behavior
+
+Acceptance:
+- accept when a user can inspect daily coffee counts over time in a scrollable bar chart without loading the full history eagerly
+
+## Phase 14
+
+Goal:
+- allow correcting coffee counts for specific days directly from the charted history view
+
+Scope:
+- from the chart screen, allow tapping a day to edit that day’s coffee count
+- consider both an editor dialog and an inline editor under the chart, and choose the simpler option
+- allow setting the exact count for a tapped day
+- allow setting the count to `0`, which clears that day
+- do not allow negative counts
+- zero-count days must still be tappable even when there is no visible bar
+- represent each day with a tappable interaction zone even if the visible bar height is zero
+- allow editing `today` only if it does not introduce meaningful extra complexity
+- if editing `today` is included, app state and widget state must refresh consistently
+
+Implementation notes:
+- editing zero days may require separating visible bar rendering from the tap target for each day
+- prefer preserving the chart interaction model rather than overloading bars with too many gestures
+- keep the first version explicit and low-friction rather than highly optimized
+
+Verification:
+- tapping a non-zero day opens the editor and updates that day correctly
+- tapping a zero day also opens the editor and can create a stored count for that day
+- setting a day to `0` removes or clears that day correctly
+- if `today` is editable in the chosen implementation, widget and app state stay in sync after edits
+- chart visuals update immediately after an edit
+
+Tests:
+- add focused tests for exact-count updates, zero-clearing behavior, and any today/widget synchronization rules that are introduced
+- add UI coverage only where the edit flow would otherwise be easy to regress
+
+Acceptance:
+- accept when users can reliably correct or clear individual days from the chart without breaking history consistency
+
 ## Phase Order Rationale
 
 - Phase 1 creates a stable skeleton without premature abstraction.
@@ -381,6 +579,12 @@ Acceptance:
 - Phase 6 finishes the minimal secondary screen.
 - Phase 7 adds only the final confidence work that is actually needed.
 - Phase 8 improves onboarding into the widget-first experience without expanding the MVP core.
+- Phase 9 closes the remaining correctness gap around passive midnight rollover.
+- Phase 10 polishes the user-facing surfaces once the functional scope is stable.
+- Phase 11 adds the late-log reminder once the core logging loop and settings surface are already stable.
+- Phase 12 simplifies the implementation after behavior and UI decisions have settled.
+- Phase 13 expands history exploration once the core app loop is stable and documented.
+- Phase 14 adds corrective editing only after the chart interaction model exists.
 
 ## Working Agreement For Implementation
 

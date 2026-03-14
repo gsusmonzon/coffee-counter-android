@@ -13,7 +13,7 @@ The design goal is **zero friction logging** and **no configuration**.
 - One coffee = one tap
 - Widget-first interaction
 - No setup required
-- No manual reset
+- No routine manual reset
 - Instant feedback
 - Local-only storage
 - Extremely small scope
@@ -34,6 +34,10 @@ Included:
 - History screen
 - Last 7 and 30 days statistics
 - Empty days shown as `0`
+- Settings screen with app version
+- Delete-all-history action with confirmation
+- In-app add-widget entry point from `Settings`
+- Inline fallback guidance when direct widget pinning is unavailable
 
 Excluded:
 
@@ -73,6 +77,8 @@ The system shall preserve previous days’ counts.
 
 The system shall generate **synthetic `0` days in the statistics UI** when no data exists for that day.
 
+The system shall allow deleting all stored coffee history from `Settings` only after explicit confirmation.
+
 ---
 
 ## Widget
@@ -93,6 +99,12 @@ The widget shall provide **vibration feedback** after each add or undo action.
 
 The widget shall remain usable without opening the app.
 
+The app shall offer a direct widget pin request from `Settings` when no widget is currently active.
+
+The app shall hide the in-app add-widget entry point while at least one widget instance is active.
+
+The app shall show inline guidance when the launcher does not support direct widget pinning.
+
 ---
 
 ## Statistics
@@ -106,6 +118,8 @@ The history screen shall display:
 
 Days without recorded data shall be displayed as `0`.
 
+Average labels shall be based on days with at least one recorded coffee, not on all calendar days in the range.
+
 ---
 
 # Non-Functional Requirements
@@ -116,6 +130,7 @@ Days without recorded data shall be displayed as `0`.
 - Logging a coffee shall require **only one tap**.
 - Widget feedback shall be **immediate**.
 - The widget shall remain readable in **2x1 layout**.
+- Destructive data deletion shall require explicit confirmation.
 
 ---
 
@@ -261,6 +276,70 @@ Yesterday’s count remains `5` in history.
 
 ---
 
+## AC5 — Delete All History
+
+**Given**
+
+Today’s coffee count is `3`.
+
+**And**
+
+Previous days contain saved coffee history.
+
+**When**
+
+The user opens `Settings` and confirms `Delete all history`.
+
+**Then**
+
+All stored coffee history is deleted.
+
+**And**
+
+Today's count becomes `0`.
+
+**And**
+
+The widget refreshes to show `0`.
+
+---
+
+## AC6 — In-App Add Widget
+
+**Given**
+
+No Coffee Counter widget is currently active.
+
+**When**
+
+The user taps `Add widget` in `Settings`.
+
+**Then**
+
+On supported launchers, the system starts the widget pin flow.
+
+**And**
+
+On unsupported launchers, the app shows inline fallback guidance.
+
+---
+
+## AC7 — Persistence After Restart
+
+**Given**
+
+Today’s coffee count is `3`.
+
+**When**
+
+The app process or device restarts.
+
+**Then**
+
+The stored count remains available after reopening the app or widget.
+
+---
+
 ## AC5 — Statistics with Empty Days
 
 **Given**
@@ -298,8 +377,7 @@ The counts remain unchanged.
 ## V2
 
 - Edit past days
-- Export data (text, json or csv)
-- Alarm for late log: we are building an habit of log coffees. Set a daily alarm at 10AM(?) if th euser has logged nothing yet. Not time sensitive
+- Alarm for late log: we are building an habit of log coffees. Set a daily alarm at 10AM(?) if the user has logged nothing yet. Not time sensitive
 - i18: localize in TOP 5 languages first. At least EN, ES
 - Simplify code:
   - extract home viemodel
@@ -312,3 +390,4 @@ Possible later improvements:
 - Charts
 - Daily goal
 - Backup/import
+  - Export data (text, json or csv)
