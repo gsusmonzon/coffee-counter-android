@@ -112,7 +112,7 @@ Status values for implementation:
 | 12 | Code quality review and simplification pass | Accepted | 2026-03-14 |
 | 13 | Charted history exploration screen | Accepted | 2026-03-14 |
 | 14 | Edit past days from chart | Accepted | 2026-03-14 |
-| 15 | Navigation improvements | In progress | - |
+| 15 | Navigation improvements | Accepted | 2026-03-15 |
 
 ## Skill Recommendation
 
@@ -580,25 +580,26 @@ Scope:
 - add a subtle directional transition between `Home` and `Settings`
 - keep navigation animation short and simple
 - avoid abrupt top-level content swaps when changing screens
-- leave room for additional navigation polish items to be defined before the phase is accepted
+- allow horizontal swipe navigation only within the bottom navigation bar zone if it stays lightweight
 
 Implementation notes:
 - prefer lightweight Compose transitions over introducing heavier navigation architecture
 - keep motion directional, brief, and consistent with the app's minimal feel
 - do not expand this phase into dialog or bottom-sheet animation unless explicitly scoped later
+- keep swipe behavior bounded to adjacent tabs; outward swipes at the edges do nothing
 
 Verification:
 - switching between `Home` and `Settings` feels smoother than an instant swap
 - forward and backward navigation move in opposite horizontal directions
 - transitions remain readable and do not feel over-animated or slow
+- swiping inside the bottom bar changes the active section without affecting the main content area gesture behavior
 
 Tests:
-- rely mainly on manual verification unless navigation state handling becomes more complex
-- add automated coverage only if future navigation polish introduces logic that is easy to regress
+- add focused UI coverage for bottom-bar swipe behavior because the gesture routing is easy to regress
+- keep broader motion quality checks as manual verification
 
 Acceptance:
-- accept when the current navigation transition feels subtle and polished, and the remaining navigation polish scope for this phase is explicitly defined
-- keep the phase open until the additional navigation improvements are either defined or intentionally dropped
+- accept when the navigation transition feels subtle and polished, and bottom-bar swipe navigation works without adding broader navigation complexity
 
 ## Phase Order Rationale
 

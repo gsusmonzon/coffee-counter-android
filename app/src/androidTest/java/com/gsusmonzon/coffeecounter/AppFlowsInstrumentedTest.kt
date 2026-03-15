@@ -8,6 +8,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gsusmonzon.coffeecounter.ui.UiTestTags
@@ -104,5 +107,38 @@ class AppFlowsInstrumentedTest {
         composeRule.onNodeWithText(
             composeRule.activity.getString(R.string.history_edit_save_label)
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun swipingBottomBar_changesSectionsWithoutCyclingPastEdges() {
+        composeRule.onNodeWithTag(UiTestTags.HOME_TODAY_COUNT).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(UiTestTags.NAV_BAR).performTouchInput {
+            swipeLeft()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(UiTestTags.HOME_TODAY_COUNT).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(UiTestTags.NAV_BAR).performTouchInput {
+            swipeRight()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_RESET_BUTTON).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(UiTestTags.NAV_BAR).performTouchInput {
+            swipeRight()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_RESET_BUTTON).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(UiTestTags.NAV_BAR).performTouchInput {
+            swipeLeft()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(UiTestTags.HOME_TODAY_COUNT).assertIsDisplayed()
     }
 }
