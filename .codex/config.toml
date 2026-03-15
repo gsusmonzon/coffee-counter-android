@@ -15,13 +15,13 @@ model_reasoning_effort = "high"
 # - never: never prompt (risky)
 # - { reject = { ... } }: auto-reject selected prompt categories
 
-approval_policy = "untrusted"
+approval_policy = "on-request"
 
 # Filesystem/network sandbox policy for tool calls:
 # - read-only (default)
 # - workspace-write
 # - danger-full-access (no sandbox; extremely risky)
-sandbox_mode = "read-only"
+sandbox_mode = "workspace-write"
 model = "gpt-5.4"
 
 [notice.model_migrations]

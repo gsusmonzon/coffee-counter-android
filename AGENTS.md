@@ -24,6 +24,12 @@
 - Prefer the smallest implementation that advances the current iteration.
 - Keep data local-first and offline-first unless requirements change.
 
+## Verification
+- Verify changes with Gradle whenever possible.
+- Prefer targeted commands first, for example: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`, or `./gradlew :app:connectedDebugAndroidTest` when device coverage is needed.
+- `./gradlew` commands should be treated as allowed for this repo. If the harness blocks execution or asks for approval, ask the user and then run them.
+- If verification cannot be run because of sandbox or device limits, state that explicitly in the final response.
+
 ## Architecture Direction
 - Follow a minimal Modern Android App Architecture style.
 - UI layer: Compose screens plus `ViewModel` state holders.
