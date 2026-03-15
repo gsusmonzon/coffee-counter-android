@@ -91,9 +91,12 @@ class CoffeeCounterWidget : GlanceAppWidget() {
             .appContainer
             .coffeeRepository
         val todayLabel = context.getString(R.string.today_title)
+        val initialTodayCount = repository.getTodayCount()
 
         provideContent {
-            val todayCount by repository.observeTodayCount().collectAsState(initial = 0)
+            val todayCount by repository.observeTodayCount().collectAsState(
+                initial = initialTodayCount,
+            )
             CoffeeCounterWidgetContent(
                 todayLabel = todayLabel,
                 todayCount = todayCount,
