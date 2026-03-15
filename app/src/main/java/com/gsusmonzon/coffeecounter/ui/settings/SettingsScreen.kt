@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -263,23 +264,13 @@ fun SettingsScreen(
             SettingsCard(
                 title = stringResource(R.string.app_version_label),
                 supporting = stringResource(R.string.app_version_supporting_text),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.app_version_value_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                headerTrailingContent = {
                     Text(
                         text = uiState.versionName,
                         style = MaterialTheme.typography.titleMedium,
                     )
-                }
+                },
+            ) {
             }
         }
 
@@ -345,6 +336,7 @@ private fun SettingsCard(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     supportingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    headerTrailingContent: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -359,11 +351,29 @@ private fun SettingsCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = titleColor,
-            )
+            if (headerTrailingContent == null) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = titleColor,
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = titleColor,
+                    )
+                    Row(modifier = Modifier.padding(start = 16.dp)) {
+                        headerTrailingContent()
+                    }
+                }
+            }
             Text(
                 text = supporting,
                 style = MaterialTheme.typography.bodyMedium,

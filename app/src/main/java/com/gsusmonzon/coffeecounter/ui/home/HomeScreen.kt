@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -315,18 +316,6 @@ fun HomeScreen(
             )
         }
 
-        item {
-            SectionTitle(
-                title = stringResource(R.string.history_title),
-            )
-        }
-
-        if (uiState.historySections.all { it.totalCount == 0 }) {
-            item {
-                EmptyHistoryCard()
-            }
-        }
-
         items(uiState.historySections) { section ->
             HistorySummaryCard(
                 section = section,
@@ -372,34 +361,32 @@ private fun TodayCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.today_title),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text = stringResource(R.string.today_supporting_text),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringResource(R.string.todays_coffee_label),
-                    style = MaterialTheme.typography.titleMedium,
+                    text = stringResource(R.string.today_title),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
                 )
                 Text(
                     text = todayCount.toString(),
-                    modifier = Modifier.testTag(UiTestTags.HOME_TODAY_COUNT),
+                    modifier = Modifier
+                        .padding(start = 16.dp)
+                        .testTag(UiTestTags.HOME_TODAY_COUNT),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
+
+            Text(
+                text = stringResource(R.string.today_supporting_text),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -414,33 +401,6 @@ private fun TodayCard(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyHistoryCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.history_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.history_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -492,17 +452,6 @@ private fun HistorySummaryCard(
             }
         }
     }
-}
-
-@Composable
-private fun SectionTitle(
-    title: String,
-) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
-    )
 }
 
 private fun Double.toDisplayLabel(): String {
