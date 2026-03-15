@@ -2,6 +2,14 @@ package com.gsusmonzon.coffeecounter.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -18,11 +26,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import com.gsusmonzon.coffeecounter.R
 import com.gsusmonzon.coffeecounter.ui.home.HomeRoute
 import com.gsusmonzon.coffeecounter.ui.settings.SettingsRoute
@@ -88,11 +98,49 @@ fun CoffeeCounterApp() {
             }
         }
     ) { innerPadding ->
-        when (currentDestination) {
-            TopLevelDestination.HOME -> HomeRoute(modifier = Modifier.padding(innerPadding))
-            TopLevelDestination.SETTINGS -> SettingsRoute(modifier = Modifier.padding(innerPadding))
+        AnimatedContent(
+            targetState = currentDestination,
+            modifier = Modifier.padding(innerPadding),
+            contentAlignment = Alignment.TopStart,
+            transitionSpec = {
+                destinationTransition(
+                    initialDestination = initialState,
+                    targetDestination = targetState,
+                )
+            },
+            label = "top_level_destination",
+        ) { destination ->
+            when (destination) {
+                TopLevelDestination.HOME -> HomeRoute(modifier = Modifier)
+                TopLevelDestination.SETTINGS -> SettingsRoute(modifier = Modifier)
+            }
         }
     }
+}
+
+private fun destinationTransition(
+    initialDestination: TopLevelDestination,
+    targetDestination: TopLevelDestination,
+): ContentTransform {
+    val fadeSpec = tween<Float>(durationMillis = 180)
+    val slideSpec = tween<IntOffset>(durationMillis = 180)
+    val isForward = targetDestination.ordinal > initialDestination.ordinal
+    val enterOffset: (Int) -> Int = { width -> if (isForward) width / 8 else -(width / 8) }
+    val exitOffset: (Int) -> Int = { width -> if (isForward) -(width / 8) else width / 8 }
+
+    return (
+        fadeIn(animationSpec = fadeSpec) +
+            slideInHorizontally(
+                animationSpec = slideSpec,
+                initialOffsetX = enterOffset,
+            )
+        ).togetherWith(
+        fadeOut(animationSpec = fadeSpec) +
+            slideOutHorizontally(
+                animationSpec = slideSpec,
+                targetOffsetX = exitOffset,
+            )
+    )
 }
 
 @Preview

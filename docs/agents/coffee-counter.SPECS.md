@@ -122,6 +122,16 @@ Average labels shall be based on days with at least one recorded coffee, not on 
 
 ---
 
+## Navigation
+
+The app shall provide navigation between `Home` and `Settings`.
+
+Top-level navigation transitions shall be subtle and directional.
+
+Navigation motion shall remain brief and shall not feel over-animated.
+
+---
+
 # Non-Functional Requirements
 
 - The app shall work **offline**.
@@ -129,6 +139,7 @@ Average labels shall be based on days with at least one recorded coffee, not on 
 - The app shall not require login or account.
 - Logging a coffee shall require **only one tap**.
 - Widget feedback shall be **immediate**.
+- Navigation changes between top-level screens shall feel smooth and avoid abrupt visual swaps.
 - The widget shall remain readable in **2x1 layout**.
 - Destructive data deletion shall require explicit confirmation.
 
@@ -369,6 +380,20 @@ The app restarts or the device reboots.
 **Then**
 
 The counts remain unchanged.
+
+---
+
+# Navigation Improvements Phase
+
+This phase captures navigation-related polish work outside the core logging rules.
+
+Current confirmed item:
+
+- subtle directional transition between `Home` and `Settings`
+
+Open scope:
+
+- additional navigation improvements to be defined during the phase
 
 ---
 

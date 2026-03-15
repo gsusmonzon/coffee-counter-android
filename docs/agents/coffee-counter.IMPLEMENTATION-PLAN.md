@@ -1,6 +1,6 @@
 # Coffee Counter Implementation Plan
 
-Last updated: 2026-03-14
+Last updated: 2026-03-15
 
 ## Goal
 
@@ -112,6 +112,7 @@ Status values for implementation:
 | 12 | Code quality review and simplification pass | Accepted | 2026-03-14 |
 | 13 | Charted history exploration screen | Accepted | 2026-03-14 |
 | 14 | Edit past days from chart | Accepted | 2026-03-14 |
+| 15 | Navigation improvements | In progress | - |
 
 ## Skill Recommendation
 
@@ -570,6 +571,35 @@ Tests:
 Acceptance:
 - accept when users can reliably correct or clear individual days from the chart without breaking history consistency
 
+## Phase 15
+
+Goal:
+- improve navigation feel and continuity without turning navigation into a separate feature project
+
+Scope:
+- add a subtle directional transition between `Home` and `Settings`
+- keep navigation animation short and simple
+- avoid abrupt top-level content swaps when changing screens
+- leave room for additional navigation polish items to be defined before the phase is accepted
+
+Implementation notes:
+- prefer lightweight Compose transitions over introducing heavier navigation architecture
+- keep motion directional, brief, and consistent with the app's minimal feel
+- do not expand this phase into dialog or bottom-sheet animation unless explicitly scoped later
+
+Verification:
+- switching between `Home` and `Settings` feels smoother than an instant swap
+- forward and backward navigation move in opposite horizontal directions
+- transitions remain readable and do not feel over-animated or slow
+
+Tests:
+- rely mainly on manual verification unless navigation state handling becomes more complex
+- add automated coverage only if future navigation polish introduces logic that is easy to regress
+
+Acceptance:
+- accept when the current navigation transition feels subtle and polished, and the remaining navigation polish scope for this phase is explicitly defined
+- keep the phase open until the additional navigation improvements are either defined or intentionally dropped
+
 ## Phase Order Rationale
 
 - Phase 1 creates a stable skeleton without premature abstraction.
@@ -586,6 +616,7 @@ Acceptance:
 - Phase 12 simplifies the implementation after behavior and UI decisions have settled.
 - Phase 13 expands history exploration once the core app loop is stable and documented.
 - Phase 14 adds corrective editing only after the chart interaction model exists.
+- Phase 15 gives navigation polish its own small phase so motion improvements can be tracked without mixing them into functional logging work.
 
 ## Working Agreement For Implementation
 
