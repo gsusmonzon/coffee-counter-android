@@ -10,6 +10,7 @@ import com.gsusmonzon.coffeecounter.data.repository.RoomCoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
 import com.gsusmonzon.coffeecounter.feedback.ClackSoundPlayer
 import com.gsusmonzon.coffeecounter.reminder.AlarmManagerLateLogReminderScheduler
+import com.gsusmonzon.coffeecounter.widget.AlarmManagerMidnightWidgetRefreshScheduler
 
 class CoffeeCounterApplication : Application() {
     val appContainer: AppContainer by lazy {
@@ -20,6 +21,8 @@ class CoffeeCounterApplication : Application() {
         super.onCreate()
         ClackSoundPlayer(this).preload()
         AlarmManagerLateLogReminderScheduler(this).scheduleNextReminder()
+        // Intentional: users typically have a widget, so we always keep the daily rollover alarm scheduled.
+        AlarmManagerMidnightWidgetRefreshScheduler(this).schedule()
     }
 }
 

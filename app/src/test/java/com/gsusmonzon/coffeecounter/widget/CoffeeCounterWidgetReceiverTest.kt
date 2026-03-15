@@ -14,7 +14,7 @@ class CoffeeCounterWidgetReceiverTest {
         get() = RuntimeEnvironment.getApplication().applicationContext
 
     @Test
-    fun onReceive_refreshesWidgetOnDateChange() {
+    fun onReceive_refreshesWidgetOnDateChangeAsSecondaryFallback() {
         val updater = TrackingWidgetUpdater()
         val receiver = CoffeeCounterWidgetReceiver().apply {
             widgetUpdaterFactory = { updater }
