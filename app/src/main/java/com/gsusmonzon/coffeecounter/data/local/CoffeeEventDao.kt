@@ -49,6 +49,18 @@ interface CoffeeEventDao {
         limit: Int,
     ): List<CoffeeEventEntity>
 
+    @Query(
+        """
+        SELECT *
+        FROM coffee_events
+        ORDER BY reported_at_local ASC, id ASC
+        """
+    )
+    suspend fun getAllEvents(): List<CoffeeEventEntity>
+
+    @Query("SELECT DISTINCT local_date FROM coffee_events WHERE local_date IN (:dates)")
+    suspend fun getExistingDates(dates: List<String>): List<String>
+
     @Insert
     suspend fun insert(entity: CoffeeEventEntity)
 

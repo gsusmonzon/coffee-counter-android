@@ -126,7 +126,7 @@ Status values for implementation:
 | 14 | Edit past days from chart | Accepted | 2026-03-14 |
 | 15 | Navigation improvements | Accepted | 2026-03-15 |
 | 16 | Event-based coffee storage migration with local timestamps | Accepted | 2026-03-21 |
-| 17 | JSON backup export and import in Settings | Pending |  |
+| 17 | JSON backup export and import in Settings | Accepted | 2026-03-21 |
 
 ## Skill Recommendation
 

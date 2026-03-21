@@ -1,13 +1,16 @@
 package com.gsusmonzon.coffeecounter.data.repository
 
 import androidx.room.withTransaction
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportMode
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportSummary
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
 import com.gsusmonzon.coffeecounter.data.local.CoffeeEventEntity
+import com.gsusmonzon.coffeecounter.data.model.CoffeeEvent
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
+import com.gsusmonzon.coffeecounter.data.model.toCoffeeEventLocalDateTime
+import com.gsusmonzon.coffeecounter.data.model.toCoffeeEventTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -90,6 +93,60 @@ class RoomCoffeeRepository(
         }
     }
 
+    override suspend fun getAllCoffeeEvents(): List<CoffeeEvent> {
+        return dao.getAllEvents().map { entity ->
+            CoffeeEvent(
+                reportedAtLocal = entity.reported_at_local.toCoffeeEventLocalDateTime(),
+            )
+        }
+    }
+
+    override suspend fun importCoffeeEvents(
+        events: List<CoffeeEvent>,
+        mode: CoffeeHistoryImportMode,
+    ): CoffeeHistoryImportSummary {
+        val importEntities = events
+            .sortedBy(CoffeeEvent::reportedAtLocal)
+            .map { event ->
+                CoffeeEventEntity(
+                    local_date = event.localDate.toString(),
+                    reported_at_local = event.reportedAtLocal.toCoffeeEventTimestamp(),
+                )
+            }
+
+        return database.withTransaction {
+            when (mode) {
+                CoffeeHistoryImportMode.REPLACE -> {
+                    dao.deleteAll()
+                    if (importEntities.isNotEmpty()) {
+                        dao.insertAll(importEntities)
+                    }
+                    CoffeeHistoryImportSummary(
+                        importedEvents = importEntities.size,
+                        importedDays = importEntities.map(CoffeeEventEntity::local_date).distinct().size,
+                        skippedDays = 0,
+                    )
+                }
+
+                CoffeeHistoryImportMode.MERGE -> {
+                    val importDates = importEntities.map(CoffeeEventEntity::local_date).distinct()
+                    val existingDates = if (importDates.isEmpty()) emptySet() else dao.getExistingDates(importDates).toSet()
+                    val entitiesToInsert = importEntities.filter { entity ->
+                        entity.local_date !in existingDates
+                    }
+                    if (entitiesToInsert.isNotEmpty()) {
+                        dao.insertAll(entitiesToInsert)
+                    }
+                    CoffeeHistoryImportSummary(
+                        importedEvents = entitiesToInsert.size,
+                        importedDays = entitiesToInsert.map(CoffeeEventEntity::local_date).distinct().size,
+                        skippedDays = importDates.count { it in existingDates },
+                    )
+                }
+            }
+        }
+    }
+
     override suspend fun resetAll() {
         dao.deleteAll()
     }
@@ -143,8 +200,4 @@ class RoomCoffeeRepository(
 
 private fun LocalDate.toStorageKey(): String = toString()
 
-private val StorageDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-
-private fun LocalDateTime.toStorageKey(): String {
-    return truncatedTo(ChronoUnit.SECONDS).format(StorageDateTimeFormatter)
-}
+private fun LocalDateTime.toStorageKey(): String = toCoffeeEventTimestamp()

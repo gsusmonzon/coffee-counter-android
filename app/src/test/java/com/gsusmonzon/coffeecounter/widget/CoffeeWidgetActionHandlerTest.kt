@@ -1,5 +1,8 @@
 package com.gsusmonzon.coffeecounter.widget
 
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportMode
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportSummary
+import com.gsusmonzon.coffeecounter.data.model.CoffeeEvent
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import java.time.LocalDate
@@ -69,6 +72,13 @@ private class FakeCoffeeRepository : CoffeeRepository {
     override suspend fun decrementToday() {
         decrementCalls += 1
     }
+
+    override suspend fun getAllCoffeeEvents(): List<CoffeeEvent> = emptyList()
+
+    override suspend fun importCoffeeEvents(
+        events: List<CoffeeEvent>,
+        mode: CoffeeHistoryImportMode,
+    ): CoffeeHistoryImportSummary = CoffeeHistoryImportSummary(0, 0, 0)
 
     override suspend fun resetAll() {
     }

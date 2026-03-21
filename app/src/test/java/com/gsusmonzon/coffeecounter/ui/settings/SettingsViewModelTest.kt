@@ -1,10 +1,19 @@
 package com.gsusmonzon.coffeecounter.ui.settings
 
+import android.net.Uri
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeBackupExportResult
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeBackupFailureReason
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeBackupImportResult
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeBackupManager
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportMode
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportSummary
+import com.gsusmonzon.coffeecounter.data.model.CoffeeEvent
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.reminder.ReminderNotificationStatusChecker
 import com.gsusmonzon.coffeecounter.widget.CoffeeWidgetUpdater
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -19,11 +28,15 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class SettingsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeCoffeeRepository
+    private lateinit var backupManager: FakeCoffeeBackupManager
     private lateinit var widgetPinRequester: FakeWidgetPinRequester
     private lateinit var reminderNotificationStatusChecker: FakeReminderNotificationStatusChecker
     private lateinit var widgetUpdater: FakeCoffeeWidgetUpdater
@@ -32,6 +45,7 @@ class SettingsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeCoffeeRepository()
+        backupManager = FakeCoffeeBackupManager()
         widgetPinRequester = FakeWidgetPinRequester()
         reminderNotificationStatusChecker = FakeReminderNotificationStatusChecker()
         widgetUpdater = FakeCoffeeWidgetUpdater()
@@ -68,7 +82,7 @@ class SettingsViewModelTest {
             listOf(
                 DailyCount(LocalDate.of(2026, 3, 13), 4),
                 DailyCount(LocalDate.of(2026, 3, 14), 3),
-            )
+            ),
         )
         val viewModel = newViewModel()
         viewModel.onDeleteHistoryClick()
@@ -135,6 +149,62 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun onImportClick_showsImportModeDialog() {
+        val viewModel = newViewModel()
+
+        viewModel.onImportClick()
+
+        assertEquals(true, viewModel.uiState.isImportModeDialogVisible)
+    }
+
+    @Test
+    fun onImportFilePicked_setsConfirmationStateForSelectedMode() {
+        val viewModel = newViewModel()
+
+        viewModel.onImportModeSelected(CoffeeHistoryImportMode.MERGE)
+        viewModel.onImportFilePicked(Uri.parse("content://coffee/import.json"))
+
+        assertEquals(CoffeeHistoryImportMode.MERGE, viewModel.uiState.importConfirmation?.mode)
+    }
+
+    @Test
+    fun onConfirmImport_runsImportRefreshesWidgetAndShowsNotice() = runTest(dispatcher) {
+        val summary = CoffeeHistoryImportSummary(importedEvents = 4, importedDays = 2, skippedDays = 1)
+        backupManager.importResult = CoffeeBackupImportResult.Success(summary)
+        val viewModel = newViewModel()
+        viewModel.onImportModeSelected(CoffeeHistoryImportMode.MERGE)
+        viewModel.onImportFilePicked(Uri.parse("content://coffee/import.json"))
+
+        viewModel.onConfirmImport()
+        advanceUntilIdle()
+
+        assertEquals(1, backupManager.importCalls)
+        assertEquals(1, widgetUpdater.refreshCalls)
+        assertEquals(
+            SettingsNotice.ImportSuccess(
+                mode = CoffeeHistoryImportMode.MERGE,
+                summary = summary,
+            ),
+            viewModel.uiState.notice,
+        )
+    }
+
+    @Test
+    fun onExportFilePicked_showsFailureNoticeWhenWriteFails() = runTest(dispatcher) {
+        backupManager.exportResult = CoffeeBackupExportResult.Failure(CoffeeBackupFailureReason.FILE_WRITE_FAILED)
+        val viewModel = newViewModel()
+
+        viewModel.onExportFilePicked(Uri.parse("content://coffee/export.json"))
+        advanceUntilIdle()
+
+        assertEquals(1, backupManager.exportCalls)
+        assertEquals(
+            SettingsNotice.BackupFailure(CoffeeBackupFailureReason.FILE_WRITE_FAILED),
+            viewModel.uiState.notice,
+        )
+    }
+
+    @Test
     fun refreshReminderGuidanceVisibility_hidesGuidanceAfterNotificationsReturn() {
         reminderNotificationStatusChecker.canPostNotifications = false
         val viewModel = newViewModel()
@@ -149,6 +219,7 @@ class SettingsViewModelTest {
         return SettingsViewModel(
             versionName = "1.0",
             coffeeRepository = repository,
+            coffeeBackupManager = backupManager,
             widgetPinRequester = widgetPinRequester,
             reminderNotificationStatusChecker = reminderNotificationStatusChecker,
             widgetUpdater = widgetUpdater,
@@ -204,6 +275,27 @@ private class FakeCoffeeRepository : CoffeeRepository {
         todayCount.value = (todayCount.value - 1).coerceAtLeast(0)
     }
 
+    override suspend fun getAllCoffeeEvents(): List<CoffeeEvent> {
+        return dailyCounts.value.flatMap { dailyCount ->
+            List(dailyCount.count) { index ->
+                CoffeeEvent(
+                    reportedAtLocal = dailyCount.date.atStartOfDay().plusSeconds(index.toLong()),
+                )
+            }
+        }
+    }
+
+    override suspend fun importCoffeeEvents(
+        events: List<CoffeeEvent>,
+        mode: CoffeeHistoryImportMode,
+    ): CoffeeHistoryImportSummary {
+        return CoffeeHistoryImportSummary(
+            importedEvents = events.size,
+            importedDays = events.map(CoffeeEvent::localDate).distinct().size,
+            skippedDays = 0,
+        )
+    }
+
     override suspend fun resetAll() {
         resetAllCalls += 1
         todayCount.value = 0
@@ -216,6 +308,27 @@ private class FakeCoffeeRepository : CoffeeRepository {
 
     fun seedHistory(counts: List<DailyCount>) {
         dailyCounts.value = counts
+    }
+}
+
+private class FakeCoffeeBackupManager : CoffeeBackupManager {
+    var exportCalls: Int = 0
+    var importCalls: Int = 0
+    var exportResult: CoffeeBackupExportResult = CoffeeBackupExportResult.Success(0)
+    var importResult: CoffeeBackupImportResult =
+        CoffeeBackupImportResult.Success(CoffeeHistoryImportSummary(0, 0, 0))
+
+    override suspend fun exportTo(uri: Uri): CoffeeBackupExportResult {
+        exportCalls += 1
+        return exportResult
+    }
+
+    override suspend fun importFrom(
+        uri: Uri,
+        mode: CoffeeHistoryImportMode,
+    ): CoffeeBackupImportResult {
+        importCalls += 1
+        return importResult
     }
 }
 

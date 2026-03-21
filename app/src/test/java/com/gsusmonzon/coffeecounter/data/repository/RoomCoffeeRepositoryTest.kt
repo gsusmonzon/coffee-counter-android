@@ -2,7 +2,9 @@ package com.gsusmonzon.coffeecounter.data.repository
 
 import android.content.Context
 import androidx.room.Room
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportMode
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
+import com.gsusmonzon.coffeecounter.data.model.CoffeeEvent
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.Flow
@@ -213,6 +215,61 @@ class RoomCoffeeRepositoryTest {
             ).first().map { it.date to it.count },
         )
         assertEquals(null, repository.observeOldestLoggedDate().first())
+    }
+
+    @Test
+    fun importCoffeeEvents_mergeSkipsDaysThatAlreadyExistLocally() = runBlocking {
+        repository.setDailyCount(LocalDate.of(2026, 3, 14), 1)
+
+        val summary = repository.importCoffeeEvents(
+            events = listOf(
+                CoffeeEvent(LocalDateTime.of(2026, 3, 14, 9, 0, 0)),
+                CoffeeEvent(LocalDateTime.of(2026, 3, 15, 7, 30, 0)),
+            ),
+            mode = CoffeeHistoryImportMode.MERGE,
+        )
+
+        assertEquals(1, summary.importedEvents)
+        assertEquals(1, summary.importedDays)
+        assertEquals(1, summary.skippedDays)
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 3, 14) to 1,
+                LocalDate.of(2026, 3, 15) to 1,
+            ),
+            repository.observeDailyCounts(
+                startDate = LocalDate.of(2026, 3, 14),
+                endDate = LocalDate.of(2026, 3, 15),
+            ).first().map { it.date to it.count },
+        )
+    }
+
+    @Test
+    fun importCoffeeEvents_replaceClearsExistingHistoryBeforeInsert() = runBlocking {
+        repository.setDailyCount(LocalDate.of(2026, 3, 14), 2)
+
+        val summary = repository.importCoffeeEvents(
+            events = listOf(
+                CoffeeEvent(LocalDateTime.of(2026, 3, 10, 6, 0, 0)),
+                CoffeeEvent(LocalDateTime.of(2026, 3, 10, 8, 0, 0)),
+                CoffeeEvent(LocalDateTime.of(2026, 3, 11, 7, 0, 0)),
+            ),
+            mode = CoffeeHistoryImportMode.REPLACE,
+        )
+
+        assertEquals(3, summary.importedEvents)
+        assertEquals(2, summary.importedDays)
+        assertEquals(0, summary.skippedDays)
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 3, 10) to 2,
+                LocalDate.of(2026, 3, 11) to 1,
+            ),
+            repository.observeDailyCounts(
+                startDate = LocalDate.of(2026, 3, 10),
+                endDate = LocalDate.of(2026, 3, 14),
+            ).first().map { it.date to it.count },
+        )
     }
 
     @Test

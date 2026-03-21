@@ -1,5 +1,8 @@
 package com.gsusmonzon.coffeecounter.ui.home
 
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportMode
+import com.gsusmonzon.coffeecounter.data.backup.CoffeeHistoryImportSummary
+import com.gsusmonzon.coffeecounter.data.model.CoffeeEvent
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
@@ -363,6 +366,13 @@ private class FakeCoffeeRepository(
             }
         }
     }
+
+    override suspend fun getAllCoffeeEvents(): List<CoffeeEvent> = emptyList()
+
+    override suspend fun importCoffeeEvents(
+        events: List<CoffeeEvent>,
+        mode: CoffeeHistoryImportMode,
+    ): CoffeeHistoryImportSummary = CoffeeHistoryImportSummary(0, 0, 0)
 
     override suspend fun resetAll() {
         dailyCounts.value = emptyMap()
