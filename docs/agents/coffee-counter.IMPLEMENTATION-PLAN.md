@@ -1,6 +1,6 @@
 # Coffee Counter Implementation Plan
 
-Last updated: 2026-03-15
+Last updated: 2026-03-21
 
 ## Goal
 
@@ -23,6 +23,16 @@ Each phase follows the same loop:
 - App structure: two screens
 - `Home`: today counter with manual add plus history
 - `Settings`: add-widget entry point, app version, and delete-all-history with confirmation
+- coffee history will evolve from day-level aggregate rows to per-coffee event rows with local timestamp storage
+- existing day-level data must migrate without loss: each stored count of `N` becomes `N` events on that local date at `00:00:00`
+- undo removes the latest event for `today`
+- editing a day removes latest events first when reducing count, and adds `00:00:00` events when increasing count
+- export/import is a history-only backup feature in `Settings`
+- backup format: JSON with explicit metadata including `schemaVersion`, `appVersion`, `exportedAt`, and event payloads
+- import supports `Merge` and `Replace`, both behind confirmation
+- merge skips any imported day that already has at least one local event
+- import must reject files using a newer schema version than the app understands
+- version bump for the event-storage migration release: `versionName = 1.1`, `versionCode = 2`
 - history averages are intentionally based on active coffee days, not full calendar ranges
 - prefer fast tests over slow tests
 - prefer integration tests over narrow component tests
@@ -50,6 +60,7 @@ Use a minimal Modern Android App Architecture balance:
 - Room entities, DAO, database
 - repository as the app-facing API
 - no separate `LocalDataSource` abstraction in V1; the DAO already plays that role
+- represent coffee intake as individual events in persistence, and derive day totals from those events for UI, widget, reminder, and history features
 
 - Widget integration:
 - Glance widget and action handling call the same repository used by the app
@@ -76,6 +87,7 @@ Default test pyramid for this project:
 - date/day rollover rules
 - history gap-filling logic
 - decrement floor at `0`
+- import validation and merge policy rules
 
 - Robolectric when Android framework behavior matters but instrumentation is unnecessary:
 - widget action handling if practical
@@ -113,6 +125,8 @@ Status values for implementation:
 | 13 | Charted history exploration screen | Accepted | 2026-03-14 |
 | 14 | Edit past days from chart | Accepted | 2026-03-14 |
 | 15 | Navigation improvements | Accepted | 2026-03-15 |
+| 16 | Event-based coffee storage migration with local timestamps | Accepted | 2026-03-21 |
+| 17 | JSON backup export and import in Settings | Pending |  |
 
 ## Skill Recommendation
 
@@ -601,6 +615,88 @@ Tests:
 Acceptance:
 - accept when the navigation transition feels subtle and polished, and bottom-bar swipe navigation works without adding broader navigation complexity
 
+## Phase 16
+
+Goal:
+- migrate persistence from daily aggregate rows to per-coffee event rows while preserving all existing user data and storing local report time for every coffee
+
+Scope:
+- add a Room-backed event model for individual coffees with local date-time storage
+- migrate existing `daily_counts` data without loss by converting each prior daily count into that many `00:00:00` local events for the same date
+- update repository behavior so app add, widget add, and widget undo operate on event rows instead of aggregate rows
+- preserve existing app behavior that reads as day totals by deriving counts from event rows
+- update history-edit behavior so reducing a day removes latest events first and increasing a day adds `00:00:00` events
+- keep local-day semantics for today count, history, reminder logic, and midnight rollover behavior
+- bump app version to `1.1` and `versionCode` to `2` as part of this migration release
+
+Implementation notes:
+- prefer a dedicated coffee-event table rather than extending the current daily aggregate row, because event timestamps are now first-class data
+- define repository APIs around product behavior, not around leaking SQL details, even if the underlying storage model changes substantially
+- migration correctness is the highest priority for this phase; do not accept data loss in order to keep the schema simpler
+- keep local timestamp storage explicit and deterministic
+- no synthetic marker is planned in storage or export; `00:00:00` remains a convention for migrated or synthesized events, accepting ambiguity for real midnight coffees
+- if aggregate reads become materially more complex, introduce focused SQL projections or repository helpers rather than rebuilding day totals in multiple call sites
+
+Verification:
+- installing the upgraded app preserves existing logged history rather than clearing it
+- a migrated day with prior count `N` produces the same visible daily total after upgrade
+- adding coffee from app and widget still increments today immediately
+- undo still removes only today’s latest event and never crosses into a prior day
+- editing a historical day down removes events from the latest timestamps first
+- editing a historical day up adds the required number of `00:00:00` events and updates visible totals immediately
+- reminder logic, history summaries, charted history, and widget display continue to show the same daily totals as before the migration
+
+Tests:
+- add focused Room migration coverage that proves version `1` data upgrades to the new schema without losing visible counts
+- keep repository integration tests centered on derived day totals, today increment/decrement, and history-edit semantics rather than overtesting DAO implementation detail
+- add only the minimum extra unit coverage needed for event ordering rules, especially latest-first undo and latest-first removal during day edits
+
+Acceptance:
+- accept when the app behaves the same at the daily-count level as before, while all new coffee logs now persist a local timestamp and existing user data survives upgrade intact
+
+## Phase 17
+
+Goal:
+- add a local JSON backup flow for coffee history with safe import behavior that minimizes accidental data loss
+
+Scope:
+- add `Export` and `Import` actions to `Settings`
+- use the system document flows:
+- `CreateDocument` for export
+- `OpenDocument` for import
+- export coffee history only, not reminder or other app settings
+- export JSON metadata containing at least `schemaVersion`, `appVersion`, `exportedAt`, and per-event history entries
+- support two import modes selected by the user each time:
+- `Merge`: import only days that do not already have local events
+- `Replace`: clear existing history, then import the selected backup
+- require confirmation before either merge or replace begins
+- show lightweight warning copy before destructive replace import, including a suggestion to export a backup first
+- reject invalid files and files with a newer schema version than the app understands
+
+Implementation notes:
+- keep the first JSON schema explicit and narrow; version the file format deliberately instead of trying to future-proof with speculative fields
+- prefer import validation before mutating any local data
+- replace import should run as one repository-level operation so failure does not leave the app half-cleared
+- merge should operate at whole-day granularity, not per-event deduplication, to stay simple and avoid accidental duplicates
+- preserve event timestamps exactly as stored in the backup during export and import
+- refresh widget and visible app state after successful import or export-triggered mutations where relevant
+
+Verification:
+- export creates a readable JSON backup containing the expected metadata and event entries
+- importing a valid backup in merge mode adds only days that are currently absent locally
+- importing a valid backup in replace mode replaces all current history with the backup contents after confirmation
+- importing a file with unsupported schema version is rejected with clear feedback and leaves local data unchanged
+- cancelling the file picker or confirmation dialog leaves local data unchanged
+- history, today count, and widget state refresh correctly after a successful import
+
+Tests:
+- add focused unit or repository tests for backup serialization shape, schema-version rejection, merge day-skipping rules, and replace import behavior
+- add `ViewModel` or UI tests only for confirmation-state transitions and result handling that would otherwise be easy to regress
+- avoid broad end-to-end picker coverage unless a concrete Android integration issue requires it
+
+Acceptance:
+- accept when users can export their coffee history to a local JSON file and later import it safely with explicit merge or replace behavior and no silent data loss
+
 ## Phase Order Rationale
 
 - Phase 1 creates a stable skeleton without premature abstraction.
@@ -618,6 +714,8 @@ Acceptance:
 - Phase 13 expands history exploration once the core app loop is stable and documented.
 - Phase 14 adds corrective editing only after the chart interaction model exists.
 - Phase 15 gives navigation polish its own small phase so motion improvements can be tracked without mixing them into functional logging work.
+- Phase 16 changes the storage model only after the user-facing behavior is well understood, which keeps migration verification focused on preserving existing behavior.
+- Phase 17 adds backup flows only after the event model exists, so exports capture the richer long-term data shape rather than locking in the old aggregate-only format.
 
 ## Working Agreement For Implementation
 
