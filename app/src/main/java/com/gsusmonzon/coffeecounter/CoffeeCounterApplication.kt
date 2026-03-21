@@ -6,8 +6,10 @@ import androidx.room.Room
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
 import com.gsusmonzon.coffeecounter.data.repository.CoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.LocalDateProvider
+import com.gsusmonzon.coffeecounter.data.repository.LocalDateTimeProvider
 import com.gsusmonzon.coffeecounter.data.repository.RoomCoffeeRepository
 import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateProvider
+import com.gsusmonzon.coffeecounter.data.repository.SystemLocalDateTimeProvider
 import com.gsusmonzon.coffeecounter.feedback.ClackSoundPlayer
 import com.gsusmonzon.coffeecounter.reminder.AlarmManagerLateLogReminderScheduler
 import com.gsusmonzon.coffeecounter.widget.AlarmManagerMidnightWidgetRefreshScheduler
@@ -43,6 +45,8 @@ private class DefaultAppContainer(
             application,
             CoffeeCounterDatabase::class.java,
             DATABASE_NAME,
+        ).addMigrations(
+            CoffeeCounterDatabase.MIGRATION_1_2,
         ).build()
     }
 
@@ -50,10 +54,15 @@ private class DefaultAppContainer(
         SystemLocalDateProvider(application)
     }
 
+    private val localDateTimeProvider: LocalDateTimeProvider by lazy {
+        SystemLocalDateTimeProvider()
+    }
+
     override val coffeeRepository: CoffeeRepository by lazy {
         RoomCoffeeRepository(
             database = database,
             localDateProvider = localDateProvider,
+            localDateTimeProvider = localDateTimeProvider,
         )
     }
 

@@ -2,9 +2,12 @@ package com.gsusmonzon.coffeecounter.data.repository
 
 import androidx.room.withTransaction
 import com.gsusmonzon.coffeecounter.data.local.CoffeeCounterDatabase
-import com.gsusmonzon.coffeecounter.data.local.DailyCountEntity
+import com.gsusmonzon.coffeecounter.data.local.CoffeeEventEntity
 import com.gsusmonzon.coffeecounter.data.model.DailyCount
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -14,8 +17,9 @@ import kotlinx.coroutines.flow.map
 class RoomCoffeeRepository(
     private val database: CoffeeCounterDatabase,
     private val localDateProvider: LocalDateProvider,
+    private val localDateTimeProvider: LocalDateTimeProvider,
 ) : CoffeeRepository {
-    private val dao = database.dailyCountDao()
+    private val dao = database.coffeeEventDao()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeTodayCount(): Flow<Int> {
@@ -25,13 +29,12 @@ class RoomCoffeeRepository(
                 // calendar day instead of staying attached to the date from first launch.
                 dao.observeCount(today.toStorageKey())
             }
-            .map { it ?: 0 }
             .distinctUntilChanged()
     }
 
     override suspend fun getTodayCount(): Int {
         val dateKey = localDateProvider.today().toStorageKey()
-        return dao.getCountForDate(dateKey)?.count ?: 0
+        return dao.getCountForDate(dateKey)
     }
 
     override fun observeOldestLoggedDate(): Flow<LocalDate?> {
@@ -48,10 +51,10 @@ class RoomCoffeeRepository(
             startDate = startDate.toStorageKey(),
             endDate = endDate.toStorageKey(),
         ).map { entities ->
-            entities.map { entity ->
+            entities.map { row ->
                 DailyCount(
-                    date = LocalDate.parse(entity.date),
-                    count = entity.count,
+                    date = LocalDate.parse(row.date),
+                    count = row.count,
                 )
             }
         }
@@ -70,26 +73,25 @@ class RoomCoffeeRepository(
     }
 
     override suspend fun incrementToday() {
-        updateTodayCount { currentCount -> currentCount + 1 }
+        val reportedAt = localDateTimeProvider.now().toStorageKey()
+        dao.insert(
+            CoffeeEventEntity(
+                local_date = reportedAt.substringBefore('T'),
+                reported_at_local = reportedAt,
+            ),
+        )
     }
 
     override suspend fun decrementToday() {
-        updateTodayCount { currentCount -> (currentCount - 1).coerceAtLeast(0) }
+        val dateKey = localDateProvider.today().toStorageKey()
+        database.withTransaction {
+            val latestEvent = dao.getLatestEventsForDate(dateKey, limit = 1).firstOrNull() ?: return@withTransaction
+            dao.deleteByIds(listOf(latestEvent.id))
+        }
     }
 
     override suspend fun resetAll() {
         dao.deleteAll()
-    }
-
-    private suspend fun updateTodayCount(transform: (Int) -> Int) {
-        val dateKey = localDateProvider.today().toStorageKey()
-        database.withTransaction {
-            val currentCount = dao.getCountForDate(dateKey)?.count ?: 0
-            setCountInTransaction(
-                dateKey = dateKey,
-                updatedCount = transform(currentCount),
-            )
-        }
     }
 
     private suspend fun setCount(
@@ -108,9 +110,8 @@ class RoomCoffeeRepository(
         dateKey: String,
         updatedCount: Int,
     ) {
-        val current = dao.getCountForDate(dateKey)
-
-        if (updatedCount == 0 && current == null) {
+        val currentCount = dao.getCountForDate(dateKey)
+        if (updatedCount == currentCount) {
             return
         }
 
@@ -119,13 +120,31 @@ class RoomCoffeeRepository(
             return
         }
 
-        dao.upsert(
-            DailyCountEntity(
-                date = dateKey,
-                count = updatedCount,
+        if (updatedCount > currentCount) {
+            val midnight = LocalDate.parse(dateKey).atStartOfDay().toStorageKey()
+            dao.insertAll(
+                List(updatedCount - currentCount) {
+                    CoffeeEventEntity(
+                        local_date = dateKey,
+                        reported_at_local = midnight,
+                    )
+                },
             )
+            return
+        }
+
+        val eventsToDelete = dao.getLatestEventsForDate(
+            date = dateKey,
+            limit = currentCount - updatedCount,
         )
+        dao.deleteByIds(eventsToDelete.map(CoffeeEventEntity::id))
     }
 }
 
 private fun LocalDate.toStorageKey(): String = toString()
+
+private val StorageDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+
+private fun LocalDateTime.toStorageKey(): String {
+    return truncatedTo(ChronoUnit.SECONDS).format(StorageDateTimeFormatter)
+}
